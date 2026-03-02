@@ -1,0 +1,30 @@
+# ROE Gate Configuration
+# Choose your own tester LLM and judge LLM independently
+
+tester:
+  provider: "claude-code"             # anthropic, openai, claude-code, ollama
+  model: "claude-sonnet-4-6"
+  api_key_env: "ANTHROPIC_API_KEY"
+  max_turns: 50
+  temperature: 0.1
+
+judge:
+  provider: "claude-code"                # mock, anthropic, openai, gemini, ollama, bedrock
+  model: "claude-sonnet-4-6"
+  api_key_env: "ANTHROPIC_API_KEY"
+  # base_url: "https://custom-endpoint.com/v1"  # For OpenAI-compatible APIs
+
+gate:
+  roe: "examples/local_corp_roe.yaml"
+  port: 19990
+  signing: "ed25519"                # hmac or ed25519
+  hitl: true                        # Human-in-the-loop approval
+  # dry_run: true                   # Log commands without executing
+
+objective: |
+  Perform a comprehensive penetration test of the Acme Corp web application
+  at 10.0.0.0/24. Focus on:
+  1. Network reconnaissance and service enumeration
+  2. Web application vulnerability scanning
+  3. SQL injection testing on discovered parameters
+  4. Report all findings with severity ratings

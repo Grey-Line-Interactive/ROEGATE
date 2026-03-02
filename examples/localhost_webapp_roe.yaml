@@ -1,0 +1,124 @@
+# ROE Specification — Localhost Web Application Penetration Test
+# For testing local development web applications
+
+roe:
+  metadata:
+    engagement_id: "LOCAL-001"
+    client: "Local Development"
+    created: "2025-01-01T00:00:00Z"
+    approved_by: "Operator"
+    version: 1
+    notes: >
+      Penetration test of a locally-hosted web application.
+      All testing is confined to 127.0.0.1 / localhost.
+
+  schedule:
+    valid_from: "2025-01-01T00:00:00Z"
+    valid_until: "2030-12-31T23:59:59Z"
+    timezone: "UTC"
+
+  scope:
+    in_scope:
+      networks:
+        - cidr: "127.0.0.0/8"
+          description: "Localhost / loopback"
+          ports: [80, 443, 3000, 5000, 8000, 8080, 8443, 8888, 9000]
+
+      domains:
+        - pattern: "localhost"
+          include_subdomains: false
+        - pattern: "127.0.0.1"
+
+    out_of_scope:
+      networks:
+        - cidr: "10.0.0.0/8"
+          reason: "Private networks — not authorized"
+        - cidr: "172.16.0.0/12"
+          reason: "Private networks — not authorized"
+        - cidr: "192.168.0.0/16"
+          reason: "Private networks — not authorized"
+
+      domains:
+        - pattern: "*.example.com"
+          reason: "External domains — not authorized"
+
+      services:
+        - type: ssh
+          reason: "No SSH access authorized"
+
+  actions:
+    allowed:
+      - category: "reconnaissance"
+        methods:
+          - port_scan
+          - service_enumeration
+          - technology_fingerprinting
+        constraints:
+          rate_limit: "1000 requests/second"
+
+      - category: "web_application_testing"
+        methods:
+          - sql_injection
+          - xss
+          - csrf
+          - authentication_bypass
+          - authorization_testing
+          - input_validation
+          - file_inclusion
+          - ssrf
+          - business_logic
+          - header_injection
+          - open_redirect
+          - command_injection
+        constraints:
+          no_persistent_backdoors: true
+
+      - category: "api_testing"
+        methods:
+          - parameter_fuzzing
+          - authentication_testing
+          - rate_limit_testing
+          - injection
+          - broken_access_control
+
+      - category: "authentication_testing"
+        methods:
+          - password_spray
+          - default_credentials
+          - session_management
+          - token_analysis
+        constraints:
+          max_attempts_per_account: 20
+          lockout_respect: true
+
+    denied:
+      - category: "denial_of_service"
+        reason: "No DoS/DDoS testing"
+
+      - category: "social_engineering"
+        reason: "Not applicable for local testing"
+
+      - category: "data_exfiltration"
+        reason: "No bulk data extraction — max 50 records per proof of concept"
+        match:
+          record_count_threshold: 50
+
+      - category: "lateral_movement"
+        reason: "Stay on localhost only"
+
+  data_handling:
+    pii_encountered: "log_metadata_only"
+    credentials_found: "log_existence_and_values"
+    max_evidence_size: "10MB"
+
+  constraints:
+    max_concurrent_connections: 50
+    global_rate_limit: "1000 requests/second"
+    no_persistent_changes: false
+
+  emergency:
+    kill_switch: true
+    max_consecutive_denials: 5
+    auto_halt_conditions:
+      - "agent_attempts_denied_action_5_times"
+      - "agent_targets_out_of_scope_system"

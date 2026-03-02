@@ -1,0 +1,340 @@
+# ROE-SL (Rules of Engagement Specification Language) - JSON Schema
+# This defines the formal grammar for machine-readable ROE specifications
+# Version: 1.0.0
+
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: "ROE Specification Language (ROE-SL)"
+description: >
+  A formal, machine-readable specification language for defining penetration
+  testing Rules of Engagement. Designed for deterministic evaluation by the
+  ROE Gate enforcement system.
+version: "1.0.0"
+
+type: object
+required: [roe]
+additionalProperties: false
+
+properties:
+  roe:
+    type: object
+    required: [metadata, schedule, scope, actions]
+    additionalProperties: false
+    properties:
+
+      # ─── METADATA ───────────────────────────────────────────────
+      metadata:
+        type: object
+        required: [engagement_id, created, approved_by]
+        properties:
+          engagement_id:
+            type: string
+            pattern: "^ENG-\\d{4}-\\d{3,}$"
+            description: "Unique engagement identifier"
+          client:
+            type: string
+            description: "Client organization name"
+          created:
+            type: string
+            format: date-time
+          approved_by:
+            type: string
+            description: "Name and title of person who approved this ROE"
+          roe_hash:
+            type: string
+            pattern: "^sha256:[a-f0-9]{64}$"
+            description: "SHA-256 hash of the ROE spec (computed at signing)"
+          version:
+            type: integer
+            minimum: 1
+            default: 1
+          notes:
+            type: string
+            description: "Free-text notes for human context"
+
+      # ─── SCHEDULE ───────────────────────────────────────────────
+      schedule:
+        type: object
+        required: [valid_from, valid_until]
+        properties:
+          valid_from:
+            type: string
+            format: date-time
+            description: "Engagement start time (ISO 8601)"
+          valid_until:
+            type: string
+            format: date-time
+            description: "Engagement end time (ISO 8601)"
+          allowed_hours:
+            type: string
+            pattern: "^\\d{2}:\\d{2}-\\d{2}:\\d{2}$"
+            description: "Daily testing window (e.g., '09:00-17:00')"
+          timezone:
+            type: string
+            description: "IANA timezone (e.g., 'America/New_York')"
+          blackout_dates:
+            type: array
+            items:
+              type: string
+              format: date
+            description: "Dates when no testing is permitted"
+          blackout_windows:
+            type: array
+            items:
+              type: object
+              required: [start, end, reason]
+              properties:
+                start:
+                  type: string
+                  format: date-time
+                end:
+                  type: string
+                  format: date-time
+                reason:
+                  type: string
+
+      # ─── SCOPE ──────────────────────────────────────────────────
+      scope:
+        type: object
+        required: [in_scope, out_of_scope]
+        properties:
+          in_scope:
+            $ref: "#/$defs/scope_definition"
+          out_of_scope:
+            $ref: "#/$defs/scope_definition"
+
+      # ─── ACTIONS ────────────────────────────────────────────────
+      actions:
+        type: object
+        required: [allowed, denied]
+        properties:
+          allowed:
+            type: array
+            items:
+              $ref: "#/$defs/action_rule"
+          denied:
+            type: array
+            items:
+              $ref: "#/$defs/action_rule"
+          requires_approval:
+            type: array
+            items:
+              $ref: "#/$defs/approval_rule"
+
+      # ─── DATA HANDLING ──────────────────────────────────────────
+      data_handling:
+        type: object
+        properties:
+          pii_encountered:
+            type: string
+            enum: [hash_and_log_metadata_only, log_redacted, do_not_log, log_encrypted]
+          credentials_found:
+            type: string
+            enum: [log_existence_only_no_values, log_hashed, do_not_log]
+          max_evidence_size:
+            type: string
+            pattern: "^\\d+[KMG]B$"
+          evidence_encryption:
+            type: string
+            enum: [AES-256-GCM, AES-256-CBC, ChaCha20-Poly1305]
+          max_records_per_query:
+            type: integer
+            minimum: 1
+            default: 10
+            description: "Maximum number of data records that can be retrieved in a single action"
+
+      # ─── CONSTRAINTS ────────────────────────────────────────────
+      constraints:
+        type: object
+        properties:
+          max_concurrent_connections:
+            type: integer
+            minimum: 1
+          global_rate_limit:
+            type: string
+            pattern: "^\\d+ requests?/(second|minute|hour)$"
+          max_bandwidth:
+            type: string
+            pattern: "^\\d+[KMG]bps$"
+          no_persistent_changes:
+            type: boolean
+            default: true
+            description: "Agent must not make persistent changes to target systems"
+          no_production_data_storage:
+            type: boolean
+            default: true
+
+      # ─── EMERGENCY ──────────────────────────────────────────────
+      emergency:
+        type: object
+        properties:
+          kill_switch:
+            type: boolean
+            default: true
+            description: "Enable instant halt of all agent activity"
+          escalation_contact:
+            type: string
+            format: email
+          auto_halt_conditions:
+            type: array
+            items:
+              type: string
+            description: "Conditions that automatically halt the agent"
+          max_consecutive_denials:
+            type: integer
+            minimum: 1
+            default: 3
+            description: "Halt agent after N consecutive denied actions"
+
+# ─── SHARED DEFINITIONS ────────────────────────────────────────────
+$defs:
+  scope_definition:
+    type: object
+    properties:
+      networks:
+        type: array
+        items:
+          type: object
+          required: [cidr]
+          properties:
+            cidr:
+              type: string
+              description: "CIDR notation (e.g., '10.0.0.0/24')"
+            description:
+              type: string
+            reason:
+              type: string
+            ports:
+              type: array
+              items:
+                type: integer
+                minimum: 1
+                maximum: 65535
+            port_ranges:
+              type: array
+              items:
+                type: object
+                required: [start, end]
+                properties:
+                  start:
+                    type: integer
+                  end:
+                    type: integer
+
+      domains:
+        type: array
+        items:
+          type: object
+          required: [pattern]
+          properties:
+            pattern:
+              type: string
+              description: "Domain pattern with optional wildcards (e.g., '*.app.acme.com')"
+            include_subdomains:
+              type: boolean
+              default: false
+            reason:
+              type: string
+            exclude:
+              type: array
+              items:
+                type: string
+              description: "Subdomains to exclude from this pattern"
+
+      services:
+        type: array
+        items:
+          type: object
+          required: [type]
+          properties:
+            type:
+              type: string
+              enum: [web_application, database, email, dns, ftp, ssh, rdp, smb, ldap, api, custom]
+            urls:
+              type: array
+              items:
+                type: string
+                format: uri
+            protocols:
+              type: array
+              items:
+                type: string
+            reason:
+              type: string
+
+  action_rule:
+    type: object
+    required: [category]
+    properties:
+      category:
+        type: string
+        enum:
+          - reconnaissance
+          - port_scanning
+          - service_enumeration
+          - web_application_testing
+          - api_testing
+          - authentication_testing
+          - credential_testing
+          - authorization_testing
+          - injection_testing
+          - exploitation
+          - post_exploitation
+          - lateral_movement
+          - privilege_escalation
+          - data_exfiltration
+          - denial_of_service
+          - social_engineering
+          - physical
+          - wireless
+          - cloud
+          - direct_database_access
+          - any
+      methods:
+        type: array
+        items:
+          type: string
+        description: "Specific methods within the category"
+      reason:
+        type: string
+      constraints:
+        type: object
+        additionalProperties: true
+        description: "Category-specific constraints"
+      match:
+        type: object
+        description: "Additional matching criteria for this rule"
+        properties:
+          ports:
+            type: array
+            items:
+              type: integer
+          protocols:
+            type: array
+            items:
+              type: string
+          targets:
+            type: array
+            items:
+              type: string
+          record_count_threshold:
+            type: integer
+          destination_not_in:
+            type: string
+            description: "Reference to a scope section (e.g., 'scope.in_scope.networks')"
+
+  approval_rule:
+    type: object
+    required: [category, condition, approver]
+    properties:
+      category:
+        type: string
+      condition:
+        type: string
+        description: "Expression that triggers the approval requirement"
+      approver:
+        type: string
+        enum: [human_operator, team_lead, client_poc]
+      timeout:
+        type: string
+        pattern: "^\\d+[smh]$"
+        description: "How long to wait for approval before auto-denying"

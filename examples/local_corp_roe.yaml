@@ -1,0 +1,179 @@
+# Example ROE Specification — Local Corp Web Application Penetration Test
+# This is a realistic ROE for a web app pentest engagement
+
+roe:
+  metadata:
+    engagement_id: "ENG-2024-001"
+    client: "Local Corp"
+    created: "2024-01-10T09:00:00Z"
+    approved_by: "John Smith, CISO"
+    version: 1
+    notes: >
+      Web application penetration test of the Local Corp customer portal
+      and API. Testing limited to the app tier only — no direct database
+      or infrastructure testing authorized.
+
+  schedule:
+    valid_from: "2024-01-15T00:00:00Z"
+    valid_until: "2030-12-31T23:59:59Z"
+    timezone: "UTC"
+    blackout_dates: []
+
+  scope:
+    in_scope:
+      networks:
+        - cidr: "10.0.0.0/24"
+          description: "Web application subnet"
+          ports: [80, 443, 8080, 8443]
+        - cidr: "10.0.1.0/24"
+          description: "API services subnet"
+          ports: [443, 8443]
+
+      domains:
+        - pattern: "*.app.corp.local"
+          include_subdomains: true
+        - pattern: "api.corp.local"
+        - pattern: "auth.corp.local"
+
+      services:
+        - type: web_application
+          urls:
+            - "https://app.corp.local"
+            - "https://api.corp.local"
+            - "https://auth.corp.local"
+
+    out_of_scope:
+      networks:
+        - cidr: "10.0.2.0/24"
+          reason: "Production database tier — NO DIRECT ACCESS"
+        - cidr: "10.0.3.0/24"
+          reason: "Payment processing — PCI DSS scope"
+        - cidr: "10.0.4.0/24"
+          reason: "Internal corporate network"
+
+      domains:
+        - pattern: "*.payments.corp.local"
+          reason: "PCI DSS scope — excluded from testing"
+        - pattern: "*.internal.corp.local"
+          reason: "Internal tooling — not authorized"
+        - pattern: "*.prod-db.corp.local"
+          reason: "Production databases — not authorized"
+
+      services:
+        - type: database
+          protocols: ["postgresql", "mysql", "mongodb", "redis"]
+          reason: "No direct database access authorized. Test via web app only."
+        - type: email
+          reason: "No email system testing"
+        - type: ssh
+          reason: "No SSH access authorized"
+
+  actions:
+    allowed:
+      - category: "reconnaissance"
+        methods:
+          - port_scan
+          - service_enumeration
+          - dns_enumeration
+          - certificate_analysis
+          - technology_fingerprinting
+        constraints:
+          rate_limit: "100 requests/second"
+          scan_type: "tcp_connect_only"
+
+      - category: "web_application_testing"
+        methods:
+          - sql_injection
+          - xss
+          - csrf
+          - authentication_bypass
+          - authorization_testing
+          - input_validation
+          - file_inclusion
+          - ssrf
+          - business_logic
+          - header_injection
+          - open_redirect
+        constraints:
+          targets: ["https://app.corp.local/*", "https://api.corp.local/*"]
+          max_payload_size: "10KB"
+          no_persistent_backdoors: true
+
+      - category: "api_testing"
+        methods:
+          - parameter_fuzzing
+          - authentication_testing
+          - rate_limit_testing
+          - injection
+          - broken_access_control
+        constraints:
+          targets: ["https://api.corp.local/*"]
+          rate_limit: "50 requests/second"
+
+      - category: "authentication_testing"
+        methods:
+          - password_spray
+          - default_credentials
+          - session_management
+          - token_analysis
+        constraints:
+          targets: ["https://auth.corp.local/*", "https://app.corp.local/login"]
+          max_attempts_per_account: 5
+          lockout_respect: true
+
+    denied:
+      - category: "denial_of_service"
+        reason: "No DoS/DDoS testing of any kind"
+
+      - category: "social_engineering"
+        reason: "No phishing, vishing, or pretexting"
+
+      - category: "direct_database_access"
+        reason: "No direct connections to any database service"
+        match:
+          ports: [5432, 3306, 27017, 6379, 1433, 1521]
+          protocols: ["postgresql", "mysql", "mongodb", "redis", "mssql", "oracle"]
+
+      - category: "data_exfiltration"
+        reason: "No bulk data extraction — max 10 records per proof of concept"
+        match:
+          record_count_threshold: 10
+
+      - category: "lateral_movement"
+        reason: "No pivoting to other network segments"
+
+      - category: "privilege_escalation"
+        reason: "No privilege escalation beyond the application tier"
+
+    requires_approval:
+      - category: "exploitation"
+        condition: "impact_assessment.estimated_severity == 'critical'"
+        approver: "human_operator"
+        timeout: "5m"
+
+      - category: "any"
+        condition: "target.host not in scope.in_scope"
+        approver: "human_operator"
+        timeout: "5m"
+
+  data_handling:
+    pii_encountered: "hash_and_log_metadata_only"
+    credentials_found: "log_existence_only_no_values"
+    max_evidence_size: "1MB"
+    evidence_encryption: "AES-256-GCM"
+    max_records_per_query: 10
+
+  constraints:
+    max_concurrent_connections: 10
+    global_rate_limit: "200 requests/second"
+    no_persistent_changes: true
+    no_production_data_storage: true
+
+  emergency:
+    kill_switch: true
+    escalation_contact: "security-team@corp.local"
+    max_consecutive_denials: 3
+    auto_halt_conditions:
+      - "agent_attempts_denied_action_3_times"
+      - "agent_targets_out_of_scope_system"
+      - "anomalous_traffic_pattern_detected"

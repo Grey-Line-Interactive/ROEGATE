@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Caches
+.pytest_cache/
+.pytest_cache/*
+.pytest_cache
+.ruff_cache/
+
+# macOS
+.DS_Store
+._*
+
+# Editor lock files
+docs/~$*
+
+# Environment
+.env
+*.env.local
+
+# IDE
+.vscode/
+.idea/
+
+# Docs
+docs/
+
+# Claude Code
+CLAUDE.md
+.claude/
