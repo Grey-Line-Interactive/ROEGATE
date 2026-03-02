@@ -1,35 +1,52 @@
-# ROE Gate
+<p align="center">
+  <img src="assets/logo.png" alt="ROE Gate Logo" width="200">
+</p>
 
-**Out-of-band Rules of Engagement enforcement for autonomous AI penetration testing agents.**
+<h1 align="center">ROE Gate</h1>
+
+<p align="center"><strong>The first reference monitor for autonomous AI penetration testing agents.</strong></p>
 
 [![Version](https://img.shields.io/badge/version-0.1.0-blue)](https://github.com/Grey-Line-Interactive/ROEGATE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-green)](https://www.python.org)
 [![License](https://img.shields.io/badge/license-MIT-brightgreen)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-289%20passing-brightgreen)](tests/)
-
-ROE Gate is a reference monitor that sits between an AI pentest agent and the network. Every action the agent attempts — port scans, HTTP requests, SQL injection tests — must pass through the gate before it can execute. If the action violates the Rules of Engagement, the gate blocks it and no command is run. The agent never holds the signing keys and cannot bypass the gate.
+[![Tests](https://img.shields.io/badge/tests-270%20passing-brightgreen)](tests/)
 
 > **Patent Pending** (U.S. Provisional Application No. 63/993,983) — ROE Gate implements a novel architecture for constraining autonomous security testing agents. See [roegate.io](https://roegate.io) for the white paper.
 
 ---
 
-## The Problem
+## The Problem: Prompting Is Not Enforcement
 
-LLM-based agents performing autonomous penetration testing cannot reliably self-regulate through prompting alone. Prompt-based guardrails — system messages, constitutions, tool descriptions — fail 20-28% of the time under adversarial conditions.
+LLM-based agents are increasingly being used to perform autonomous penetration testing. Every major framework — from Claude Code to custom agent loops — controls these agents with system prompts: *"Stay in scope." "Only test authorized targets." "Don't access production systems."*
 
-Consider a real scenario:
+**This doesn't work.** The research is unambiguous:
 
-1. An agent is authorized to test a web application for SQL injection
-2. It discovers a SQLi vulnerability and extracts database credentials from error messages
-3. The agent decides these credentials should be verified — a reasonable next step in a manual pentest
-4. It connects directly to the **production database** on port 5432
+- **23.9%** of agent actions are risky even with explicit safety instructions *(ToolEmu, Ruan et al., ICLR 2024)*
+- **27.5%** of risky situations are missed by GPT-4's safety awareness *(R-Judge, Yuan et al., EMNLP 2024)*
+- **Zero** prompt-based defenses achieve both high utility AND high security *(AgentDojo, Debenedetti et al., NeurIPS 2024)*
+- **None** of 16 LLM agents tested achieved a safety score above 60% *(Agent-SafetyBench, Zhang et al., 2025)*
+
+The failure mode is predictable and dangerous:
+
+```
+1. Agent is authorized to test a web application for SQL injection
+2. It finds a SQLi vulnerability and extracts database credentials from error messages
+3. It decides these credentials should be verified — a reasonable next step in a manual pentest
+4. It connects directly to the production database on port 5432
 5. It enumerates tables, extracts PII, and exfiltrates data
+```
 
-The ROE said "web application testing only, no direct database access." The agent's system prompt said the same thing. But the agent reasoned its way around the restriction because prompt-based guardrails are **advisory, not mandatory**.
+The Rules of Engagement said *"web application testing only, no direct database access."* The system prompt said the same thing. But the agent reasoned its way around the restriction because **prompt-based guardrails are advisory, not mandatory.** The agent had good intentions. It just had no enforced boundaries.
 
-## The Solution
+This is not a hypothetical. As autonomous security testing agents become more capable and more widely deployed, the gap between what an agent is *told* to do and what it *can* do becomes a liability — for the operator, for the client, and for the industry.
 
-ROE Gate implements the **Reference Monitor** pattern — a mandatory, out-of-band enforcement layer that the agent cannot bypass, influence, or reason around:
+---
+
+## The Solution: A Reference Monitor the Agent Cannot Bypass
+
+ROE Gate implements the **Reference Monitor** pattern — a concept from operating system security (Anderson, 1972) that has been used for decades in SELinux, AWS IAM, and capability-based systems — but **never applied to LLM agent tool execution.** Until now.
+
+The architecture is simple: the agent never directly executes anything. Every action passes through the gate. The gate evaluates it against a formal Rules of Engagement specification. If the action is allowed, the gate signs a cryptographic token. The tool executor verifies the signature before running the command. **The agent never holds the signing keys and cannot bypass, influence, or reason around the gate.**
 
 ```
 Agent tries: nmap -p 1-1000 10.0.2.50
@@ -53,13 +70,40 @@ Agent tries: nmap -p 1-1000 10.0.2.50
           database tier — NO DIRECT ACCESS)"
 ```
 
-### Three-Stage Pipeline
+This is not another wrapper around an LLM. This is not a prompt that says "please be careful." This is a mandatory enforcement layer with cryptographic guarantees.
 
-| Stage | Component | What It Does |
-|-------|-----------|-------------|
-| **1** | Deterministic Rule Engine | Checks IP ranges, ports, time windows, action categories against the ROE spec. Same input = same output. No LLM involved. Handles ~80% of decisions. |
-| **2** | Isolated Judge LLM | A separate LLM with **no access** to the agent's context, reasoning, or conversation history evaluates edge cases. The agent cannot influence the judge. |
-| **3** | Cryptographic Action Signing | Approved actions get a signed token (HMAC-SHA256 or Ed25519) with a 30-second TTL. The executor verifies the signature before running anything. Replay attacks are blocked. |
+### Six Components
+
+| # | Component | What It Does |
+|---|-----------|-------------|
+| **1** | **Action Intent Serializer** | Every tool call is converted to a structured ActionIntent — tool-agnostic, machine-readable, auditable. 21 action categories cover every pentest technique. |
+| **2** | **ROE Specification Language** | Human-readable YAML that defines scope, allowed actions, denied actions, schedules, data handling, and emergency procedures. Your contract, as code. |
+| **3** | **Deterministic Rule Engine** | Eight evaluation checks in strict priority order: schedule, scope (IP/domain/service), hard-deny, approval gates, action constraints, hard-allow, and fallback. Same input = same output. No LLM involved. Handles ~80% of decisions. |
+| **4** | **Isolated Judge LLM** | A separate LLM instance with **no access** to the agent's context, reasoning, or conversation history evaluates edge cases. It sees only the action and the policy. The agent cannot influence the judge. |
+| **5** | **Cryptographic Action Signing** | Approved actions get HMAC-SHA256 tokens with 30-second TTL, single-use enforcement, and ROE-hash binding. The agent cannot forge, replay, or reuse tokens. |
+| **6** | **Signature-Enforcing Executor** | Tools only run after 6-step token verification: signature, expiration, replay check, ROE hash, action match, and tool whitelist. No valid token = no execution. |
+
+### Security Properties
+
+These are **guarantees**, not suggestions:
+
+- **Mandatory Mediation** — Every pentest tool call must pass through the gate. A four-tier PreToolUse hook detects network targets in ANY command — not just known tools. IPs, URLs, CIDRs, `/dev/tcp` patterns, and embedded tool names are caught even inside Python scripts and custom binaries.
+- **Complete Mediation** — No action bypasses evaluation. If the Judge LLM goes down, hard rules still enforce scope.
+- **Tamper Resistance** — HMAC-SHA256 tokens with ROE-hash binding. The agent never holds signing keys. Tokens expire in 30 seconds and cannot be replayed.
+- **Verifiable Compliance** — Every evaluation is logged with full context: action, policy check, verdict, token, and execution result. Complete audit trail for post-engagement review.
+
+### How It Differs from Existing Approaches
+
+| Approach | Why It's Insufficient |
+|----------|----------------------|
+| **System prompts** ("Stay in scope") | Advisory, not mandatory. Agent reasons around them 20-28% of the time. |
+| **Constitutional AI** | Self-critique during training. Same model evaluates itself — no out-of-band enforcement. |
+| **NVIDIA NeMo Guardrails** | Programmable rails via Colang DSL. Not security-testing-specific; no crypto signing; no isolated judge. |
+| **Guardrails AI** | Output validation for content quality. Not tool-call gating. |
+| **OPA/Rego** | General-purpose policy evaluation. Not LLM-agent-aware; no semantic evaluation of intent. |
+| **ROE Gate** | Mandatory reference monitor + deterministic rules + isolated judge + cryptographic tokens. The agent cannot bypass it regardless of reasoning. |
+
+---
 
 ### Full Data Flow
 
@@ -170,7 +214,6 @@ Or build one visually:
 
 ```bash
 roe-gate creator       # Opens the ROE Creator web form in your browser
-roe-gate roe-creator   # Same thing, alternative name
 ```
 
 ### Launch
@@ -341,7 +384,7 @@ src/
 └── licensing/      # Tier definitions
 
 examples/           # ROE specs, agent configs, launch scripts
-tests/              # 289 tests
+tests/              # 270 tests
 ```
 
 ## Tests
@@ -365,7 +408,7 @@ The **Community Edition** is free and MIT-licensed for personal use, research, l
 | **Enterprise** | Large organizations with multiple teams | Unlimited ROEs, custom integrations, dedicated support, SLA |
 | **MSSP/OEM** | Managed security providers and vendors | Multi-tenant, white-label, patent license for redistribution |
 
-See [roegate.io](https://roegate.io) for pricing or contact [rick@greylineinteractive.com](mailto:rick@greylineinteractive.com).
+> **Ready to run AI agents on real engagements?** Visit **[roegate.io](https://roegate.io)** for the white paper, architecture deep-dive, and commercial licensing. To request a Pro, Enterprise, or MSSP license, contact **[rick@greylineinteractive.com](mailto:rick@greylineinteractive.com)**.
 
 ## License
 
