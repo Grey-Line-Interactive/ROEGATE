@@ -20,6 +20,10 @@ Instead, please report vulnerabilities via email:
 - Impact assessment (what an attacker could achieve)
 - Any suggested fix (optional)
 
+### Bug Bounty
+
+ROE Gate does not operate a bug bounty program and does not pay bounties for vulnerability reports. We appreciate responsible disclosure and will credit reporters (with permission) in release notes.
+
 ### Response Timeline
 
 - **Acknowledgment:** Within 48 hours
