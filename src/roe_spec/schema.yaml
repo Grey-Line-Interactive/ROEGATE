@@ -228,7 +228,7 @@ $defs:
           properties:
             pattern:
               type: string
-              description: "Domain pattern with optional wildcards (e.g., '*.app.acme.com')"
+              description: "Domain pattern with optional wildcards (e.g., '*.app.corp.local')"
             include_subdomains:
               type: boolean
               default: false

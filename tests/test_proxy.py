@@ -53,7 +53,7 @@ def test_proxy_execute_allowed_action(sample_roe_spec):
     proxy = _make_proxy(sample_roe_spec, verdict="ALLOW", confidence=0.9)
     result = proxy.execute_tool(
         tool="curl",
-        args=["-v", "https://app.acme.com"],
+        args=["-v", "https://app.corp.local"],
         target_host="10.0.0.50",
         target_port=443,
         category=ActionCategory.WEB_APPLICATION_TESTING,
@@ -156,11 +156,11 @@ def test_build_intent_sets_domain_and_url(sample_roe_spec):
     proxy = _make_proxy(sample_roe_spec)
     intent = proxy._build_intent(
         tool="curl",
-        args=["-v", "https://app.acme.com/login"],
+        args=["-v", "https://app.corp.local/login"],
         target_host="10.0.0.50",
         target_port=443,
-        target_domain="app.acme.com",
-        target_url="https://app.acme.com/login",
+        target_domain="app.corp.local",
+        target_url="https://app.corp.local/login",
         category=ActionCategory.WEB_APPLICATION_TESTING,
         subcategory="",
         description="Test login page",
@@ -168,5 +168,5 @@ def test_build_intent_sets_domain_and_url(sample_roe_spec):
         data_access=DataAccessType.NONE,
         justification="",
     )
-    assert intent.target.domain == "app.acme.com"
-    assert intent.target.url == "https://app.acme.com/login"
+    assert intent.target.domain == "app.corp.local"
+    assert intent.target.url == "https://app.corp.local/login"

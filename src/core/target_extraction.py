@@ -64,7 +64,7 @@ _HOSTNAME_RE = re.compile(
     r"(?<![.\w/])"
     r"([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?"
     r"(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*"
-    r"\.(?:com|net|org|io|dev|app|gov|edu|mil|co|us|uk|de|fr|jp|cn|ru|br|in|au|ca|it|xyz|info|biz|me|tv|cc|ly))"
+    r"\.(?:com|net|org|io|dev|app|gov|edu|mil|co|us|uk|de|fr|jp|cn|ru|br|in|au|ca|it|xyz|info|biz|me|tv|cc|ly|local|internal|corp|lan|test))"
     r"(?![.\w])",
     re.IGNORECASE,
 )
@@ -113,7 +113,7 @@ def extract_network_targets(command: str) -> list[str]:
       - CIDR notation (10.0.0.0/24)
       - Bash /dev/tcp and /dev/udp redirections
       - Well-known hostnames (localhost, etc.)
-      - Dotted domain names (example.com, api.acme.com)
+      - Dotted domain names (example.com, api.corp.local)
 
     Filters out:
       - The gate's own address (localhost on ROE_GATE_PORT)
@@ -165,7 +165,7 @@ def extract_network_targets(command: str) -> list[str]:
         if hostname in cmd_lower:
             _add(hostname)
 
-    # --- Dotted domain names (example.com, api.acme.com) ---
+    # --- Dotted domain names (example.com, api.corp.local) ---
     for match in _HOSTNAME_RE.finditer(command):
         _add(match.group(1))
 

@@ -58,9 +58,9 @@ def sample_roe_spec() -> dict[str, Any]:
                     },
                 ],
                 "domains": [
-                    {"pattern": "*.app.acme.com", "include_subdomains": True},
-                    {"pattern": "api.acme.com"},
-                    {"pattern": "auth.acme.com"},
+                    {"pattern": "*.app.corp.local", "include_subdomains": True},
+                    {"pattern": "api.corp.local"},
+                    {"pattern": "auth.corp.local"},
                 ],
             },
             "out_of_scope": {
@@ -70,9 +70,9 @@ def sample_roe_spec() -> dict[str, Any]:
                     {"cidr": "10.0.4.0/24", "reason": "Internal corporate network"},
                 ],
                 "domains": [
-                    {"pattern": "*.payments.acme.com", "reason": "PCI DSS scope"},
-                    {"pattern": "*.internal.acme.com", "reason": "Internal tooling"},
-                    {"pattern": "*.prod-db.acme.com", "reason": "Production databases"},
+                    {"pattern": "*.payments.corp.local", "reason": "PCI DSS scope"},
+                    {"pattern": "*.internal.corp.local", "reason": "Internal tooling"},
+                    {"pattern": "*.prod-db.corp.local", "reason": "Production databases"},
                 ],
                 "services": [
                     {
@@ -108,7 +108,7 @@ def sample_roe_spec() -> dict[str, Any]:
                         "authentication_bypass",
                     ],
                     "constraints": {
-                        "targets": ["https://app.acme.com/*"],
+                        "targets": ["https://app.corp.local/*"],
                         "max_payload_size": "10KB",
                     },
                 },

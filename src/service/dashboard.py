@@ -21,7 +21,7 @@ Layout:
     |  STATS | Evaluations: 42  Allows: 35  Denials: 6  Halts: 1          |
     +======================================================================+
     |  DECISIONS                                                           |
-    |  14:32:01 [ALLOW]  curl -> app.acme.com:443 (web_application_test)   |
+    |  14:32:01 [ALLOW]  curl -> app.corp.local:443 (web_application_test)   |
     |  14:32:05 [ALLOW]  nmap -> 10.0.0.1 (reconnaissance)                |
     |  14:32:08 [DENY]   psql -> 10.0.2.50:5432 (direct_database_access)  |
     |  ...                                                                 |

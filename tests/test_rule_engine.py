@@ -83,10 +83,10 @@ def test_out_of_scope_domain_is_hard_deny(sample_roe_spec, make_intent):
     engine = RuleEngine(sample_roe_spec)
     intent = make_intent(
         tool="curl",
-        host="staging.payments.acme.com",
+        host="staging.payments.corp.local",
         port=443,
         category=ActionCategory.WEB_APPLICATION_TESTING,
-        domain="staging.payments.acme.com",
+        domain="staging.payments.corp.local",
     )
     result = engine.evaluate(intent)
     assert result.verdict == RuleVerdict.HARD_DENY
@@ -96,10 +96,10 @@ def test_out_of_scope_internal_domain_is_hard_deny(sample_roe_spec, make_intent)
     engine = RuleEngine(sample_roe_spec)
     intent = make_intent(
         tool="curl",
-        host="wiki.internal.acme.com",
+        host="wiki.internal.corp.local",
         port=443,
         category=ActionCategory.WEB_APPLICATION_TESTING,
-        domain="wiki.internal.acme.com",
+        domain="wiki.internal.corp.local",
     )
     result = engine.evaluate(intent)
     assert result.verdict == RuleVerdict.HARD_DENY

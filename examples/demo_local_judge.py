@@ -145,8 +145,8 @@ def main():
         subcategory="sql_injection",
         description="Testing for SQL injection in user search endpoint",
         target=Target(
-            host="app.acme.com", port=443, protocol="https",
-            domain="app.acme.com",
+            host="app.corp.local", port=443, protocol="https",
+            domain="app.corp.local",
         ),
         parameters={"method": "GET", "payload": "' OR '1'='1"},
         impact=ImpactAssessment(
@@ -190,8 +190,8 @@ def main():
         category=ActionCategory.WEB_APPLICATION_TESTING,
         description="Testing payments endpoint",
         target=Target(
-            host="checkout.payments.acme.com", port=443,
-            domain="checkout.payments.acme.com",
+            host="checkout.payments.corp.local", port=443,
+            domain="checkout.payments.corp.local",
         ),
     )
 

@@ -235,7 +235,7 @@ def cmd_demo(args: argparse.Namespace) -> None:
                         "The target and method are within the authorized scope."
                     ),
                     "roe_clauses_cited": [
-                        "scope.in_scope.domains - *.app.acme.com",
+                        "scope.in_scope.domains - *.app.corp.local",
                         "actions.allowed - web_application_testing",
                     ],
                 })
@@ -275,8 +275,8 @@ def cmd_demo(args: argparse.Namespace) -> None:
                     {"cidr": "10.0.1.0/24", "description": "API subnet", "ports": [443, 8443]},
                 ],
                 "domains": [
-                    {"pattern": "*.app.acme.com", "include_subdomains": True},
-                    {"pattern": "api.acme.com"},
+                    {"pattern": "*.app.corp.local", "include_subdomains": True},
+                    {"pattern": "api.corp.local"},
                 ],
             },
             "out_of_scope": {
@@ -285,8 +285,8 @@ def cmd_demo(args: argparse.Namespace) -> None:
                     {"cidr": "10.0.3.0/24", "reason": "Payment processing (PCI DSS)"},
                 ],
                 "domains": [
-                    {"pattern": "*.payments.acme.com", "reason": "PCI DSS scope"},
-                    {"pattern": "*.prod-db.acme.com", "reason": "Production databases"},
+                    {"pattern": "*.payments.corp.local", "reason": "PCI DSS scope"},
+                    {"pattern": "*.prod-db.corp.local", "reason": "Production databases"},
                 ],
                 "services": [
                     {
@@ -307,7 +307,7 @@ def cmd_demo(args: argparse.Namespace) -> None:
                 {
                     "category": "web_application_testing",
                     "methods": ["sql_injection", "xss", "csrf", "authentication_bypass"],
-                    "constraints": {"targets": ["https://app.acme.com/*"]},
+                    "constraints": {"targets": ["https://app.corp.local/*"]},
                 },
             ],
             "denied": [
@@ -348,7 +348,7 @@ def cmd_demo(args: argparse.Namespace) -> None:
 
     # --- Scenario 1: Allowed action ---
     print_header("Scenario 1: SQL Injection Test on In-Scope Web App")
-    print("  The agent wants to test app.acme.com for SQL injection.")
+    print("  The agent wants to test app.corp.local for SQL injection.")
     print("  This is an ALLOWED action on an IN-SCOPE target.")
     print()
 
@@ -360,12 +360,12 @@ def cmd_demo(args: argparse.Namespace) -> None:
         subcategory="sql_injection",
         description="Testing for SQL injection in user search endpoint",
         target=Target(
-            host="app.acme.com",
+            host="app.corp.local",
             port=443,
             protocol="https",
             service="https",
-            domain="app.acme.com",
-            url="https://app.acme.com/api/users?search=test'OR'1'='1",
+            domain="app.corp.local",
+            url="https://app.corp.local/api/users?search=test'OR'1'='1",
         ),
         parameters={"method": "GET", "payload": "' OR '1'='1"},
         impact=ImpactAssessment(

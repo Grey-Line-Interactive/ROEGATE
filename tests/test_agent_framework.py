@@ -81,14 +81,14 @@ class TestToolRouter(unittest.TestCase):
     def test_build_intent_http_request(self):
         """_build_intent should create valid intent for roe_http_request."""
         intent = self.router._build_intent("roe_http_request", {
-            "url": "https://app.acme.com/login",
+            "url": "https://app.corp.local/login",
             "method": "POST",
             "data": "user=admin&pass=test",
             "justification": "Testing login form",
         })
         self.assertEqual(intent["action"]["tool"], "http_request")
         self.assertEqual(intent["action"]["category"], "web_application_testing")
-        self.assertEqual(intent["target"]["host"], "app.acme.com")
+        self.assertEqual(intent["target"]["host"], "app.corp.local")
         self.assertEqual(intent["agent_justification"], "Testing login form")
 
     def test_build_intent_extracts_host_from_url(self):
@@ -102,10 +102,10 @@ class TestToolRouter(unittest.TestCase):
     def test_build_intent_dns_lookup(self):
         """_build_intent should use domain for dns_lookup target."""
         intent = self.router._build_intent("roe_dns_lookup", {
-            "domain": "acme.com",
+            "domain": "corp.local",
             "record_type": "MX",
         })
-        self.assertEqual(intent["target"]["host"], "acme.com")
+        self.assertEqual(intent["target"]["host"], "corp.local")
         self.assertEqual(intent["action"]["category"], "reconnaissance")
 
     def test_build_intent_service_probe(self):
@@ -133,7 +133,7 @@ class TestToolRouter(unittest.TestCase):
     def test_build_command_curl(self):
         """_build_command should create correct curl command."""
         cmd, args = self.router._build_command("roe_http_request", {
-            "url": "https://app.acme.com/api",
+            "url": "https://app.corp.local/api",
             "method": "POST",
             "data": '{"test": 1}',
         })
@@ -144,27 +144,27 @@ class TestToolRouter(unittest.TestCase):
         self.assertIn("POST", args)
         self.assertIn("-d", args)
         self.assertIn('{"test": 1}', args)
-        self.assertIn("https://app.acme.com/api", args)
+        self.assertIn("https://app.corp.local/api", args)
 
     def test_build_command_dig(self):
         """_build_command should create correct dig command."""
         cmd, args = self.router._build_command("roe_dns_lookup", {
-            "domain": "acme.com",
+            "domain": "corp.local",
             "record_type": "MX",
         })
         self.assertEqual(cmd, "dig")
-        self.assertEqual(args, ["acme.com", "MX"])
+        self.assertEqual(args, ["corp.local", "MX"])
 
     def test_build_command_sqlmap(self):
         """_build_command should create correct sqlmap command."""
         cmd, args = self.router._build_command("roe_sql_injection_test", {
-            "url": "http://app.acme.com/search",
+            "url": "http://app.corp.local/search",
             "parameter": "q",
             "method": "POST",
         })
         self.assertEqual(cmd, "sqlmap")
         self.assertIn("-u", args)
-        self.assertIn("http://app.acme.com/search", args)
+        self.assertIn("http://app.corp.local/search", args)
         self.assertIn("-p", args)
         self.assertIn("q", args)
         self.assertIn("--batch", args)
@@ -181,13 +181,13 @@ class TestToolRouter(unittest.TestCase):
     def test_build_command_gobuster(self):
         """_build_command should create correct gobuster command."""
         cmd, args = self.router._build_command("roe_directory_scan", {
-            "url": "http://app.acme.com",
+            "url": "http://app.corp.local",
             "wordlist": "big",
         })
         self.assertEqual(cmd, "gobuster")
         self.assertIn("dir", args)
         self.assertIn("-u", args)
-        self.assertIn("http://app.acme.com", args)
+        self.assertIn("http://app.corp.local", args)
         self.assertIn("-w", args)
         self.assertIn("/usr/share/wordlists/big.txt", args)
 

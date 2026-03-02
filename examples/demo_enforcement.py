@@ -221,7 +221,7 @@ def main():
         tool="curl",
         category=ActionCategory.WEB_APPLICATION_TESTING,
         description="Legit test",
-        target=Target(host="app.acme.com", port=443, domain="app.acme.com"),
+        target=Target(host="app.corp.local", port=443, domain="app.corp.local"),
         impact=ImpactAssessment(estimated_severity=ImpactLevel.LOW),
     )
 
@@ -242,7 +242,7 @@ def main():
         print(f"  Got legitimate token: {gate_result.token.token_id}")
         print(f"  Waiting 2 seconds for it to expire...")
         time.sleep(2)
-        result = short_executor.execute(gate_result.token, "curl", ["-X", "GET", "https://app.acme.com"])
+        result = short_executor.execute(gate_result.token, "curl", ["-X", "GET", "https://app.corp.local"])
         if not result.success:
             print_pass(f"{result.error}")
         else:
@@ -254,11 +254,11 @@ def main():
     gate_result_2 = gate.evaluate(legit_intent)
     if gate_result_2.token:
         # First use — should work
-        result_first = executor.execute(gate_result_2.token, "curl", ["-X", "GET", "https://app.acme.com"])
+        result_first = executor.execute(gate_result_2.token, "curl", ["-X", "GET", "https://app.corp.local"])
         print(f"  First use: {'success' if result_first.success else 'failed'}")
 
         # Second use — should be blocked
-        result_replay = executor.execute(gate_result_2.token, "curl", ["-X", "GET", "https://app.acme.com"])
+        result_replay = executor.execute(gate_result_2.token, "curl", ["-X", "GET", "https://app.corp.local"])
         if not result_replay.success:
             print_pass(f"Replay blocked: {result_replay.error}")
         else:
@@ -307,9 +307,9 @@ def main():
     print("  Attempt: Agent requests scan of out-of-scope domain")
     oos_result = proxy.execute_tool(
         tool="curl",
-        args=["-X", "GET", "https://checkout.payments.acme.com/api/charge"],
-        target_host="checkout.payments.acme.com",
-        target_domain="checkout.payments.acme.com",
+        args=["-X", "GET", "https://checkout.payments.corp.local/api/charge"],
+        target_host="checkout.payments.corp.local",
+        target_domain="checkout.payments.corp.local",
         category=ActionCategory.WEB_APPLICATION_TESTING,
         description="Test payments endpoint",
         justification="Looking for payment processing vulnerabilities",
@@ -324,11 +324,11 @@ def main():
     print("  Attempt: Legitimate web test on in-scope target (should PASS)")
     legit_result = proxy.execute_tool(
         tool="curl",
-        args=["-X", "GET", "https://app.acme.com/api/search?q=test"],
-        target_host="app.acme.com",
+        args=["-X", "GET", "https://app.corp.local/api/search?q=test"],
+        target_host="app.corp.local",
         target_port=443,
-        target_domain="app.acme.com",
-        target_url="https://app.acme.com/api/search?q=test",
+        target_domain="app.corp.local",
+        target_url="https://app.corp.local/api/search?q=test",
         category=ActionCategory.WEB_APPLICATION_TESTING,
         subcategory="sql_injection",
         description="Testing search endpoint for SQL injection",

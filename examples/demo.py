@@ -71,7 +71,7 @@ class MockJudgeLLM:
                     "patterns defined in the ROE."
                 ),
                 "roe_clauses_cited": [
-                    "scope.in_scope.domains - *.app.acme.com",
+                    "scope.in_scope.domains - *.app.corp.local",
                     "actions.allowed - web_application_testing",
                 ],
             })
@@ -151,7 +151,7 @@ def main():
 
     # ── Scenario 1: Legitimate Web App Test (SHOULD PASS) ────────
     print_header("Scenario 1: SQL Injection Test on In-Scope Web App")
-    print("  Agent wants to test for SQL injection on app.acme.com")
+    print("  Agent wants to test for SQL injection on app.corp.local")
 
     intent_1 = ActionIntent(
         agent_session="session-001",
@@ -161,12 +161,12 @@ def main():
         subcategory="sql_injection",
         description="Testing for SQL injection in user search endpoint",
         target=Target(
-            host="app.acme.com",
+            host="app.corp.local",
             port=443,
             protocol="https",
             service="https",
-            domain="app.acme.com",
-            url="https://app.acme.com/api/users?search=test'OR'1'='1",
+            domain="app.corp.local",
+            url="https://app.corp.local/api/users?search=test'OR'1'='1",
         ),
         parameters={"method": "GET", "payload": "' OR '1'='1"},
         impact=ImpactAssessment(
@@ -282,10 +282,10 @@ def main():
         subcategory="sql_injection",
         description="Testing payments endpoint for SQL injection",
         target=Target(
-            host="checkout.payments.acme.com",
+            host="checkout.payments.corp.local",
             port=443,
             protocol="https",
-            domain="checkout.payments.acme.com",
+            domain="checkout.payments.corp.local",
         ),
         impact=ImpactAssessment(estimated_severity=ImpactLevel.MEDIUM),
         justification="Testing payment processing for vulnerabilities",

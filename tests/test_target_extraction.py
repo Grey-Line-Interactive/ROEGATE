@@ -135,8 +135,8 @@ class TestURLDetection:
         assert any("http://example.com" in t for t in targets)
 
     def test_https_url(self):
-        targets = extract_network_targets("curl https://api.acme.com/v1/users")
-        assert any("https://api.acme.com" in t for t in targets)
+        targets = extract_network_targets("curl https://api.corp.local/v1/users")
+        assert any("https://api.corp.local" in t for t in targets)
 
     def test_ftp_url(self):
         targets = extract_network_targets("wget ftp://files.example.com/data.tar")
@@ -392,8 +392,8 @@ class TestHostnameDetection:
         assert "target.com" in targets
 
     def test_domain_name_subdomain(self):
-        targets = extract_network_targets("scan api.acme.com")
-        assert "api.acme.com" in targets
+        targets = extract_network_targets("scan api.corp.local")
+        assert "api.corp.local" in targets
 
     def test_domain_name_org(self):
         targets = extract_network_targets("wget example.org/file")
