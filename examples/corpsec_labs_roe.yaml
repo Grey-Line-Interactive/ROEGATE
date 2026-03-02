@@ -1,0 +1,211 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# CorpSec Labs — Penetration Test ROE Specification
+# Engagement: ENG-2025-001
+#
+# This file is used by all ROE Gate START guides as the shared example.
+# It targets a fictitious local lab environment:
+#
+#   Web App Subnet:  192.168.100.0/24
+#     webapp.corp.local   → 192.168.100.10  (ports 80, 443)
+#     intranet.corp.local → 192.168.100.20  (port 8080)
+#
+#   API Subnet:      192.168.101.0/24
+#     api.corp.local      → 192.168.101.10  (ports 8080, 8443)
+#
+#   Out of Scope:    192.168.200.0/24  (Production DB tier)
+#                    192.168.201.0/24  (Payment processing — PCI DSS)
+#
+# Replace the IP ranges and domains with your actual lab environment.
+# Use `roe-gate validate corpsec_labs_roe.yaml` to verify before running.
+# ─────────────────────────────────────────────────────────────────────────────
+
+roe:
+
+  # ── Engagement Metadata ────────────────────────────────────────────────────
+  metadata:
+    engagement_id: "ENG-2025-001"
+    client: "CorpSec Labs"
+    created: "2025-01-01"
+    approved_by: "Jane Smith, CISO — CorpSec Labs"
+    version: "1.0"
+    notes: |
+      Authorized penetration test of the CorpSec Labs staging environment.
+      Testing includes web application and API security assessment.
+      Production systems (192.168.200.0/24, 192.168.201.0/24) are STRICTLY
+      out of scope. Any agent action targeting out-of-scope systems will be
+      blocked and logged as a critical security event.
+
+  # ── Engagement Window ──────────────────────────────────────────────────────
+  schedule:
+    valid_from: "2025-01-01T00:00:00"
+    valid_until: "2026-12-31T23:59:59"
+    timezone: "UTC"
+    blackout_windows: []        # e.g. "2025-06-01T08:00:00/2025-06-01T09:00:00"
+
+  # ── Scope ──────────────────────────────────────────────────────────────────
+  scope:
+    in_scope:
+      networks:
+        - cidr: "192.168.100.0/24"
+          description: "Web application staging subnet"
+          ports: [80, 443, 8080, 8443]
+        - cidr: "192.168.101.0/24"
+          description: "API staging subnet"
+          ports: [8080, 8443, 9000]
+
+      domains:
+        - pattern: "*.corp.local"
+          include_subdomains: true
+        - pattern: "webapp.corp.local"
+        - pattern: "intranet.corp.local"
+        - pattern: "api.corp.local"
+
+      services:
+        - type: "web_application"
+          urls:
+            - "http://webapp.corp.local/*"
+            - "https://webapp.corp.local/*"
+            - "http://intranet.corp.local:8080/*"
+            - "http://api.corp.local:8080/*"
+            - "https://api.corp.local:8443/*"
+
+    out_of_scope:
+      networks:
+        - cidr: "192.168.200.0/24"
+          reason: "Production database tier — strictly prohibited"
+        - cidr: "192.168.201.0/24"
+          reason: "Payment processing (PCI DSS) — strictly prohibited"
+        - cidr: "0.0.0.0/0"
+          reason: "All networks not explicitly in scope are prohibited"
+
+      domains:
+        - pattern: "*.prod.corp.local"
+          reason: "Production systems"
+        - pattern: "*.payments.corp.local"
+          reason: "PCI DSS payment scope"
+        - pattern: "*.internal.corp.local"
+          reason: "Internal corporate infrastructure"
+
+      services:
+        - type: "database"
+          protocols: ["postgresql", "mysql", "mongodb", "redis", "mssql"]
+          reason: "No direct database connections permitted"
+        - type: "cloud_metadata"
+          urls: ["http://169.254.169.254/*"]
+          reason: "Cloud metadata endpoint prohibited"
+
+  # ── Authorized Actions ─────────────────────────────────────────────────────
+  actions:
+    allowed:
+      - category: "reconnaissance"
+        methods:
+          - "port_scan"
+          - "service_enumeration"
+          - "os_fingerprinting"
+          - "dns_lookup"
+          - "certificate_inspection"
+          - "http_banner_grabbing"
+          - "directory_enumeration"
+        constraints:
+          max_scan_rate: "500 packets/second"
+          allowed_tools: ["nmap", "masscan", "dig", "curl", "whatweb", "gobuster", "ffuf"]
+
+      - category: "web_application_testing"
+        methods:
+          - "sql_injection"
+          - "xss"
+          - "csrf"
+          - "authentication_bypass"
+          - "session_management_testing"
+          - "idor"
+          - "path_traversal"
+          - "file_inclusion"
+          - "ssrf"
+          - "xxe"
+        constraints:
+          targets: ["http://webapp.corp.local/*", "https://webapp.corp.local/*",
+                    "http://intranet.corp.local:8080/*"]
+          allowed_tools: ["sqlmap", "curl", "nikto", "burpsuite", "ffuf", "wfuzz"]
+          max_payload_size: "50KB"
+
+      - category: "api_testing"
+        methods:
+          - "parameter_fuzzing"
+          - "authentication_testing"
+          - "rate_limit_testing"
+          - "injection_testing"
+          - "mass_assignment"
+          - "broken_object_level_authorization"
+        constraints:
+          targets: ["http://api.corp.local:8080/*", "https://api.corp.local:8443/*"]
+          allowed_tools: ["curl", "ffuf", "sqlmap"]
+
+      - category: "authentication_testing"
+        methods:
+          - "password_spray"
+          - "default_credentials"
+          - "brute_force_limited"
+          - "token_analysis"
+          - "multi_factor_bypass_testing"
+        constraints:
+          max_attempts_per_account: 5
+          lockout_awareness: true
+
+    denied:
+      - category: "denial_of_service"
+        reason: "No DoS/DDoS testing permitted — availability must be maintained"
+      - category: "social_engineering"
+        reason: "No phishing, vishing, or human-targeted attacks"
+      - category: "direct_database_access"
+        reason: "No direct DB connections — web layer only"
+      - category: "data_exfiltration"
+        reason: "Demonstrating access is sufficient — no actual data extraction"
+      - category: "lateral_movement"
+        reason: "No pivoting to additional systems beyond target scope"
+      - category: "persistence"
+        reason: "No backdoors, cron jobs, or persistent implants"
+      - category: "destructive_testing"
+        reason: "No file deletion, data corruption, or service disruption"
+
+    requires_approval:
+      - category: "critical_exploitation"
+        condition: "Any exploit with CVSS score >= 9.0"
+        approver: "human_via_dashboard"
+        timeout_seconds: 300
+        on_timeout: "deny"
+      - category: "credential_testing"
+        condition: "Automated credential stuffing with > 3 attempts per account"
+        approver: "human_via_dashboard"
+        timeout_seconds: 120
+        on_timeout: "deny"
+
+  # ── Data Handling ──────────────────────────────────────────────────────────
+  data_handling:
+    pii_encountered:
+      action: "log_existence_only"
+      reason: "Do not store PII — log that it exists and move on"
+    credentials_found:
+      action: "log_existence_and_type"
+      reason: "Note credential type found but do not record actual values"
+    vulnerability_evidence:
+      action: "capture_and_encrypt"
+      max_size: "5MB"
+      encryption: "AES-256-GCM"
+    max_evidence_records: 100
+
+  # ── Operational Constraints ────────────────────────────────────────────────
+  constraints:
+    max_concurrent_connections: 10
+    global_rate_limit: "200 requests/second"
+    no_persistent_changes: true
+    require_reversibility: true
+
+  # ── Emergency Controls ─────────────────────────────────────────────────────
+  emergency:
+    kill_switch: true
+    escalation_contact: "security-lead@corpsec.local"
+    max_consecutive_denials: 5
+    auto_halt_on:
+      - "out_of_scope_target_detected"
+      - "production_system_contacted"
+      - "data_exfiltration_detected"

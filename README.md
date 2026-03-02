@@ -175,28 +175,28 @@ Create a YAML file describing the engagement scope (see [examples/local_corp_roe
 ```yaml
 roe:
   metadata:
-    engagement_id: "ENG-2024-001"
-    client: "Acme Corp"
-    approved_by: "John Smith, CISO"
+    engagement_id: "ENG-2025-001"
+    client: "CorpSec Labs"
+    approved_by: "Jane Smith, CISO"
 
   schedule:
-    valid_from: "2024-01-15T00:00:00Z"
-    valid_until: "2024-02-15T23:59:59Z"
+    valid_from: "2025-01-01T00:00:00Z"
+    valid_until: "2026-12-31T23:59:59Z"
 
   scope:
     in_scope:
       networks:
-        - cidr: "10.0.0.0/24"
-          description: "Web application subnet"
+        - cidr: "192.168.100.0/24"
+          description: "Web application staging subnet"
           ports: [80, 443, 8080]
       domains:
-        - pattern: "*.app.corp.local"
+        - pattern: "*.corp.local"
           include_subdomains: true
 
     out_of_scope:
       networks:
-        - cidr: "10.0.2.0/24"
-          reason: "Production database — NO ACCESS"
+        - cidr: "192.168.200.0/24"
+          reason: "Production database tier — NO ACCESS"
 
   actions:
     allowed:
@@ -210,10 +210,11 @@ roe:
     max_consecutive_denials: 3
 ```
 
-Or build one visually:
+Or build one visually in your browser:
 
 ```bash
-roe-gate creator       # Opens the ROE Creator web form in your browser
+roe-gate pentest --dry-run --roe examples/local_corp_roe.yaml --dashboard
+# Then open: http://127.0.0.1:19990/creator
 ```
 
 ### Launch
@@ -231,11 +232,35 @@ roe-gate pentest --roe examples/local_corp_roe.yaml --dashboard
 # Config file + CLI override (CLI flags take priority)
 roe-gate pentest --config examples/roe_gate_config.yaml --judge mock
 
-# Dry run — start the gate service and print config without launching Claude Code
+# Dry run — start the gate service and print config without launching the agent
 roe-gate pentest --roe examples/local_corp_roe.yaml --dry-run
 ```
 
 See [`examples/roe_gate_config.yaml`](examples/roe_gate_config.yaml) for all available configuration options.
+
+---
+
+## End-to-End Start Guides
+
+The `examples/` directory contains complete, step-by-step guides for each supported LLM provider. Each guide covers environment setup, ROE creation, launching a gated pentest against a fictitious lab environment, using the audit dashboard, exporting events, and human-in-the-loop approval.
+
+| Guide | Tester Provider | Best For |
+|---|---|---|
+| [**START_claude_code.md**](examples/START_claude_code.md) | Claude Code (MCP + PreToolUse hooks) | Deepest integration — Claude drives the pentest through gated MCP tools |
+| [**START_anthropic_api.md**](examples/START_anthropic_api.md) | Anthropic API | Production pipelines, CI/CD, headless runs without a local Claude Code install |
+| [**START_openai.md**](examples/START_openai.md) | OpenAI / GPT-4o | Teams on OpenAI; also covers Azure OpenAI, Groq, vLLM, LM Studio |
+| [**START_ollama.md**](examples/START_ollama.md) | Ollama (local models) | Fully offline / air-gapped; no API keys; all inference on your machine |
+
+All guides use the same fictional engagement scenario defined in [`examples/corpsec_labs_roe.yaml`](examples/corpsec_labs_roe.yaml):
+
+```
+Target network:   192.168.100.0/24  (web app staging)
+                  192.168.101.0/24  (API staging)
+Out of scope:     192.168.200.0/24  (production DB — blocked)
+                  192.168.201.0/24  (payments, PCI DSS — blocked)
+```
+
+> **New to ROE Gate?** Start with [`examples/START_claude_code.md`](examples/START_claude_code.md) — it is the most thoroughly documented guide and covers every feature end-to-end.
 
 ---
 
