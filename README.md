@@ -219,15 +219,23 @@ roe-gate creator       # Opens the ROE Creator web form in your browser
 ### Launch
 
 ```bash
-# Launch the gated pentest agent (starts gate service + MCP server + Claude Code)
+# Launch using a config file (recommended — all settings in one place)
+roe-gate pentest --config examples/roe_gate_config.yaml
+
+# Or launch with individual CLI flags
 roe-gate pentest --roe examples/local_corp_roe.yaml
 
 # With the real-time audit dashboard
 roe-gate pentest --roe examples/local_corp_roe.yaml --dashboard
 
+# Config file + CLI override (CLI flags take priority)
+roe-gate pentest --config examples/roe_gate_config.yaml --judge mock
+
 # Dry run — start the gate service and print config without launching Claude Code
 roe-gate pentest --roe examples/local_corp_roe.yaml --dry-run
 ```
+
+See [`examples/roe_gate_config.yaml`](examples/roe_gate_config.yaml) for all available configuration options.
 
 ---
 
@@ -358,7 +366,8 @@ pip install -e ".[all-providers]"
 ## CLI Reference
 
 ```bash
-roe-gate pentest --roe <file>              # Launch gated pentest agent (gate + MCP + Claude Code)
+roe-gate pentest --config <config.yaml>    # Launch using config file (recommended)
+roe-gate pentest --roe <file>              # Launch with individual CLI flags
 roe-gate pentest --roe <file> --dashboard  # Same, with real-time audit dashboard
 roe-gate pentest --roe <file> --dry-run    # Start gate service only, print config
 roe-gate pentest --roe <file> --hitl       # Enable human-in-the-loop approval

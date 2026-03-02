@@ -265,14 +265,15 @@ class TestROEGateConfig(unittest.TestCase):
         self.assertEqual(config.tester.max_turns, 50)
         self.assertEqual(config.tester.temperature, 0.1)
 
-        self.assertEqual(config.judge.provider, "claude-code")
+        self.assertEqual(config.judge.provider, "claude-cli")
         self.assertEqual(config.judge.model, "claude-sonnet-4-6")
         self.assertEqual(config.judge.api_key_env, "ANTHROPIC_API_KEY")
 
         self.assertEqual(config.gate.roe, "examples/local_corp_roe.yaml")
         self.assertEqual(config.gate.port, 19990)
-        self.assertEqual(config.gate.signing, "ed25519")
-        self.assertTrue(config.gate.hitl)
+        self.assertEqual(config.gate.signing, "hmac")
+        self.assertFalse(config.gate.hitl)
+        self.assertTrue(config.gate.dashboard)
 
         self.assertIn("penetration test", config.objective)
 

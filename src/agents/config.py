@@ -17,6 +17,10 @@ class GateConfig:
     hitl: bool = False
     dry_run: bool = False
     log_dir: str = ""
+    dashboard: bool = False
+    rbac: bool = False
+    slack_webhook: str = ""
+    webhook_url: str = ""
 
 
 @dataclass
@@ -71,6 +75,10 @@ class ROEGateConfig:
             hitl=gate_data.get("hitl", False),
             dry_run=gate_data.get("dry_run", False),
             log_dir=gate_data.get("log_dir", ""),
+            dashboard=gate_data.get("dashboard", False),
+            rbac=gate_data.get("rbac", False),
+            slack_webhook=gate_data.get("slack_webhook", ""),
+            webhook_url=gate_data.get("webhook_url", ""),
         )
 
         return cls(
@@ -107,6 +115,10 @@ class ROEGateConfig:
                 "hitl": self.gate.hitl,
                 "dry_run": self.gate.dry_run,
                 "log_dir": self.gate.log_dir,
+                "dashboard": self.gate.dashboard,
+                "rbac": self.gate.rbac,
+                "slack_webhook": self.gate.slack_webhook,
+                "webhook_url": self.gate.webhook_url,
             },
             "objective": self.objective,
         }

@@ -472,6 +472,38 @@ def cmd_pentest(args: argparse.Namespace) -> None:
     project_root = Path(__file__).resolve().parent.parent
     python = sys.executable
 
+    # -- Merge config file with CLI flags --
+    if args.config:
+        from .agents.config import ROEGateConfig
+        config = ROEGateConfig.from_yaml(args.config)
+        # Config provides defaults; explicit CLI flags override
+        if args.roe is None:
+            args.roe = config.gate.roe
+        if args.judge == "claude-cli":
+            args.judge = config.judge.provider or "claude-cli"
+        if args.model == "sonnet":
+            args.model = config.tester.model or "sonnet"
+        if args.gate_port == 19990:
+            args.gate_port = config.gate.port
+        if args.signing_algo == "hmac":
+            args.signing_algo = config.gate.signing or "hmac"
+        if not args.human_in_the_loop:
+            args.human_in_the_loop = config.gate.hitl
+        if not args.dry_run:
+            args.dry_run = config.gate.dry_run
+        if not args.dashboard:
+            args.dashboard = config.gate.dashboard
+        if not args.rbac:
+            args.rbac = config.gate.rbac
+        if not args.slack_webhook:
+            args.slack_webhook = config.gate.slack_webhook or None
+        if not args.webhook_url:
+            args.webhook_url = config.gate.webhook_url or None
+
+    if not args.roe:
+        print("Error: --roe is required (provide via CLI or in config file under gate.roe)")
+        sys.exit(1)
+
     # -- Verify claude CLI --
     claude_path = shutil.which("claude")
     if claude_path is None:
@@ -519,12 +551,32 @@ def cmd_pentest(args: argparse.Namespace) -> None:
         print(f"  Alerting:    Webhook configured")
     print("=" * 64)
 
+    # -- Check for stale processes on the gate port --
+    gate_port = args.gate_port
+    try:
+        stale_check = subprocess.run(
+            ["lsof", "-ti", f":{gate_port}"],
+            capture_output=True, text=True, timeout=5,
+        )
+        stale_pids = stale_check.stdout.strip()
+        if stale_pids:
+            print(f"\n  Port {gate_port} is already in use (PID: {stale_pids.replace(chr(10), ', ')}).")
+            print("  Killing stale process(es)...")
+            for pid in stale_pids.splitlines():
+                try:
+                    os.kill(int(pid.strip()), signal.SIGTERM)
+                except (ProcessLookupError, ValueError):
+                    pass
+            time.sleep(1)
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass  # lsof not available or timed out — proceed anyway
+
     # -- Start Gate Service --
     print("\n  Starting Gate Service...")
     gate_cmd = [
         python, "-m", "src.service.gate_api",
         "--roe", str(Path(args.roe).resolve()),
-        "--port", str(args.gate_port),
+        "--port", str(gate_port),
         "--judge", args.judge,
         "--signing-algo", args.signing_algo,
     ]
@@ -564,6 +616,9 @@ def cmd_pentest(args: argparse.Namespace) -> None:
     deadline = time.time() + 15
     healthy = False
     while time.time() < deadline:
+        # If the subprocess already exited, don't keep polling
+        if gate_proc.poll() is not None:
+            break
         try:
             req = urllib.request.Request(f"{gate_url}/api/v1/health")
             with urllib.request.urlopen(req, timeout=2) as resp:
@@ -577,7 +632,17 @@ def cmd_pentest(args: argparse.Namespace) -> None:
 
     if not healthy:
         print("  Error: Gate Service did not become healthy within 15 seconds.")
-        _cleanup_gate()
+        # Show the gate service's stderr so the user can see the actual error
+        stderr_output = ""
+        if gate_proc.poll() is not None:
+            stderr_output = gate_proc.stderr.read().decode(errors="replace")
+        else:
+            _cleanup_gate()
+            stderr_output = gate_proc.stderr.read().decode(errors="replace")
+        if stderr_output:
+            print("\n  Gate Service output:")
+            for line in stderr_output.strip().splitlines():
+                print(f"    {line}")
         sys.exit(1)
 
     print("  Gate Service is ready.")
@@ -824,8 +889,9 @@ def main() -> None:
         epilog=(
             "examples:\n"
             "  roe-gate creator                                    # build a ROE visually\n"
-            "  roe-gate pentest --roe examples/acme_corp_roe.yaml  # run a gated pentest\n"
-            "  roe-gate pentest --roe my_roe.yaml --judge claude-cli --model opus\n"
+            "  roe-gate pentest --config roe_gate_config.yaml      # launch using config file\n"
+            "  roe-gate pentest --roe examples/acme_corp_roe.yaml  # launch with CLI flags\n"
+            "  roe-gate pentest --config conf.yaml --dashboard     # config + CLI override\n"
             "  roe-gate validate examples/acme_corp_roe.yaml       # validate a ROE file\n"
             "  roe-gate demo                                       # see enforcement demo\n"
             "  roe-gate info                                       # show installed providers\n"
@@ -867,8 +933,12 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     pentest_parser.add_argument(
-        "--roe", required=True,
-        help="Path to the ROE YAML specification file",
+        "--roe", default=None,
+        help="Path to the ROE YAML specification file (required unless provided in --config)",
+    )
+    pentest_parser.add_argument(
+        "--config", default=None, metavar="FILE",
+        help="Path to roe_gate_config.yaml — sets all options from a single file (CLI flags override)",
     )
     pentest_parser.add_argument(
         "--judge", default="claude-cli",

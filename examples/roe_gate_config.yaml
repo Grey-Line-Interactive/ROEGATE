@@ -1,29 +1,42 @@
 # ROE Gate Configuration
-# Choose your own tester LLM and judge LLM independently
+# ─────────────────────────────────────────────────────────────
+# Use with:  roe-gate pentest --config roe_gate_config.yaml
+# CLI flags override any values set here.
+# ─────────────────────────────────────────────────────────────
 
+# Pentest agent (the LLM that performs the test)
 tester:
-  provider: "claude-code"             # anthropic, openai, claude-code, ollama
-  model: "claude-sonnet-4-6"
-  api_key_env: "ANTHROPIC_API_KEY"
+  provider: "claude-code"             # claude-code, anthropic, openai, ollama
+  model: "claude-sonnet-4-6"          # model name/id for the agent
+  api_key_env: "ANTHROPIC_API_KEY"    # env var holding the API key
   max_turns: 50
   temperature: 0.1
+  # base_url: ""                      # custom endpoint for OpenAI-compatible APIs
+  # system_prompt: ""                 # override the default system prompt
 
+# Judge LLM (evaluates actions against the ROE — runs in isolation)
 judge:
-  provider: "claude-code"                # mock, anthropic, openai, gemini, ollama, bedrock
+  provider: "claude-cli"              # mock, anthropic, openai, claude-cli, claude-sdk, ollama
   model: "claude-sonnet-4-6"
   api_key_env: "ANTHROPIC_API_KEY"
-  # base_url: "https://custom-endpoint.com/v1"  # For OpenAI-compatible APIs
+  # base_url: ""                      # custom endpoint for OpenAI-compatible APIs
 
+# Gate Service settings
 gate:
-  roe: "examples/local_corp_roe.yaml"
-  port: 19990
-  signing: "ed25519"                # hmac or ed25519
-  hitl: true                        # Human-in-the-loop approval
-  # dry_run: true                   # Log commands without executing
+  roe: "examples/local_corp_roe.yaml" # path to the ROE YAML specification
+  port: 19990                         # HTTP API port
+  signing: "hmac"                     # token signing: "hmac" or "ed25519"
+  hitl: false                         # human-in-the-loop approval via dashboard
+  dashboard: true                     # open real-time audit dashboard on launch
+  # dry_run: false                    # start gate service only, don't launch agent
+  # rbac: false                       # role-based access control
+  # slack_webhook: ""                 # Slack incoming webhook URL for alerts
+  # webhook_url: ""                   # generic webhook URL for alerts
 
+# Pentest objective (passed to the agent as context)
 objective: |
-  Perform a comprehensive penetration test of the Acme Corp web application
-  at 10.0.0.0/24. Focus on:
+  Perform a comprehensive penetration test of the target environment.
+  Focus on:
   1. Network reconnaissance and service enumeration
   2. Web application vulnerability scanning
   3. SQL injection testing on discovered parameters

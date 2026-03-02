@@ -9,6 +9,12 @@ build/
 .venv/
 .venv/*
 
+# Claude
+.claude
+.claude/
+.claude/*
+CLAUDE.md
+
 # Caches
 .pytest_cache/
 .ruff_cache/
@@ -27,9 +33,3 @@ docs/~$*
 # IDE
 .vscode/
 .idea/
-
-# Claude
-.claude
-.claude/
-.claude/*
-CLAUDE.md
