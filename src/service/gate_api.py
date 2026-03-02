@@ -337,6 +337,8 @@ def _build_dashboard_html(engagement_id: str, roe_hash: str) -> str:
   .controls button:hover {{ border-color: var(--blue); }}
   .controls button.danger {{ border-color: var(--red); color: var(--red); }}
   .controls button.danger:hover {{ background: #3d1f20; }}
+  .controls button.export {{ border-color: var(--blue); color: var(--blue); }}
+  .controls button.export:hover {{ background: #1a2a40; }}
   .status {{ margin-left: auto; font-size: 12px; color: var(--muted); }}
   .status .dot {{ display: inline-block; width: 8px; height: 8px;
                   border-radius: 50%; background: var(--green); margin-right: 6px; }}
@@ -390,6 +392,8 @@ def _build_dashboard_html(engagement_id: str, roe_hash: str) -> str:
 </div>
 <div class="controls">
   <button class="danger" onclick="doHalt()">Emergency Halt</button>
+  <button class="export" onclick="exportJSON()">Export JSON</button>
+  <button class="export" onclick="exportCSV()">Export CSV</button>
   <div class="status"><span class="dot" id="dot"></span><span id="status-text">Connecting...</span></div>
 </div>
 <script>
@@ -456,6 +460,26 @@ async function doHalt() {{
   await fetch(BASE + '/api/v1/halt', {{ method: 'POST',
     headers: {{'Content-Type': 'application/json'}}, body: '{{}}' }});
   refresh();
+}}
+
+function exportJSON() {{
+  fetch(BASE + '/api/v1/audit')
+    .then(r => r.json())
+    .then(data => {{
+      const blob = new Blob([JSON.stringify(data, null, 2)], {{type: 'application/json'}});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'roe_gate_audit_' + new Date().toISOString().slice(0,19).replace(/:/g,'-') + '.json';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }});
+}}
+
+function exportCSV() {{
+  const a = document.createElement('a');
+  a.href = BASE + '/api/v1/audit/export';
+  a.download = 'roe_gate_audit_' + new Date().toISOString().slice(0,19).replace(/:/g,'-') + '.csv';
+  a.click();
 }}
 
 async function refreshApprovals() {{
@@ -539,6 +563,7 @@ class GateRequestHandler(BaseHTTPRequestHandler):
             "/api/v1/execute": Permission.EXECUTE,
             "/api/v1/stats": Permission.VIEW_STATS,
             "/api/v1/audit": Permission.VIEW_AUDIT,
+            "/api/v1/audit/export": Permission.VIEW_AUDIT,
             "/api/v1/halt": Permission.HALT,
             "/api/v1/resume": Permission.RESUME,
             "/api/v1/roe/list": Permission.VIEW_STATS,
@@ -603,6 +628,7 @@ class GateRequestHandler(BaseHTTPRequestHandler):
         route_map = {
             "/api/v1/stats": self._handle_stats,
             "/api/v1/audit": self._handle_audit,
+            "/api/v1/audit/export": self._handle_audit_export,
             "/api/v1/health": self._handle_health,
             "/api/v1/roe/list": self._handle_roe_list,
             "/api/v1/compliance/soc2": self._handle_compliance_soc2,
@@ -765,6 +791,51 @@ class GateRequestHandler(BaseHTTPRequestHandler):
             "events": [e.to_dict() for e in events],
             "summary": summary,
         })
+
+    def _handle_audit_export(self) -> None:
+        """GET /api/v1/audit/export -- Export audit log as CSV download."""
+        import csv
+        import io
+
+        gate: ROEGate = self.server.gate  # type: ignore[attr-defined]
+        events = gate.audit.get_events()
+
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow([
+            "timestamp", "event_type", "decision", "tool", "category",
+            "target_host", "target_port", "reasoning", "token_issued",
+            "denial_count", "event_id",
+        ])
+        for event in events:
+            d = event.details or {}
+            intent = d.get("intent", {})
+            action = intent.get("action", {})
+            target = intent.get("target", {})
+            writer.writerow([
+                event.timestamp,
+                event.event_type,
+                d.get("decision", ""),
+                action.get("tool", ""),
+                action.get("category", ""),
+                target.get("host", ""),
+                target.get("port", ""),
+                d.get("reasoning", ""),
+                d.get("token_issued", ""),
+                d.get("denial_count", ""),
+                event.event_id,
+            ])
+
+        csv_bytes = output.getvalue().encode("utf-8")
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "text/csv; charset=utf-8")
+        self.send_header(
+            "Content-Disposition",
+            'attachment; filename="roe_gate_audit.csv"',
+        )
+        self.send_header("Content-Length", str(len(csv_bytes)))
+        self.end_headers()
+        self.wfile.write(csv_bytes)
 
     def _handle_halt(self) -> None:
         """POST /api/v1/halt -- Trigger emergency halt."""
