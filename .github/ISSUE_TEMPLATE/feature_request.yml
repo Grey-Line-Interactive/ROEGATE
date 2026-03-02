@@ -1,0 +1,58 @@
+name: Feature Request
+description: Suggest a feature or improvement for ROE Gate
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        We appreciate feature suggestions. Please describe your idea below.
+
+        **Note:** ROE Gate is developed entirely in-house by Grey Line Interactive. We review all suggestions but do not accept pull requests.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which area does this relate to?
+      options:
+        - Gate Service / Rule Engine
+        - Judge LLM / Providers
+        - ROE Specification Language
+        - Cryptographic Signing
+        - MCP Tools
+        - CLI
+        - Dashboard
+        - ROE Creator
+        - Documentation
+        - New Integration
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or Use Case
+      description: What problem does this solve? What use case does it enable?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: How do you envision this working?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any workarounds or alternative approaches you've tried?
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Screenshots, examples, links, or anything else that helps explain the request.

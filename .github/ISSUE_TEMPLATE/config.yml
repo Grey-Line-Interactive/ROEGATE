@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: General Questions & Discussion
+    url: https://github.com/Grey-Line-Interactive/ROEGATE/discussions
+    about: Ask questions, share ideas, and discuss ROE Gate with the community.
+  - name: Commercial Licensing
+    url: https://roegate.io
+    about: For Pro, Enterprise, and MSSP licensing inquiries.
