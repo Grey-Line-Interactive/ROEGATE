@@ -12,11 +12,19 @@ try:
         Ed25519PublicKey,
     )
     from cryptography.hazmat.primitives import serialization
+
+    _HAS_CRYPTOGRAPHY = True
 except ImportError:
-    raise ImportError(
-        "The 'cryptography' package is required for license key operations. "
-        "Install it with: pip install cryptography"
-    )
+    _HAS_CRYPTOGRAPHY = False
+
+
+def _require_cryptography() -> None:
+    """Raise ImportError if the cryptography package is not installed."""
+    if not _HAS_CRYPTOGRAPHY:
+        raise ImportError(
+            "The 'cryptography' package is required for license key operations. "
+            "Install it with: pip install cryptography"
+        )
 
 
 class LicenseError(Exception):
@@ -31,6 +39,7 @@ def generate_key_pair() -> tuple[bytes, bytes]:
     Returns:
         Tuple of (private_key_pem, public_key_pem) as bytes.
     """
+    _require_cryptography()
     private_key = Ed25519PrivateKey.generate()
 
     private_pem = private_key.private_bytes(
@@ -57,6 +66,7 @@ def generate_license_key(private_key_pem: bytes, payload: dict) -> str:
     Returns:
         License key string in format: ROE-{TIER}-{base64_payload}.{base64_signature}
     """
+    _require_cryptography()
     tier = payload.get("tier", "community").upper()
 
     payload_json = json.dumps(payload, separators=(",", ":"), sort_keys=True)
@@ -140,6 +150,7 @@ def verify_license_key(key_string: str, public_key_pem: bytes) -> dict:
     payload_json = json.dumps(payload, separators=(",", ":"), sort_keys=True)
 
     # Load the public key and verify signature
+    _require_cryptography()
     try:
         public_key = serialization.load_pem_public_key(public_key_pem)
         public_key.verify(signature, payload_json.encode())

@@ -5,11 +5,12 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+.venv
+.venv/
+.venv/*
 
 # Caches
 .pytest_cache/
-.pytest_cache/*
-.pytest_cache
 .ruff_cache/
 
 # macOS
@@ -27,9 +28,8 @@ docs/~$*
 .vscode/
 .idea/
 
-# Docs
-docs/
-
-# Claude Code
-CLAUDE.md
+# Claude
+.claude
 .claude/
+.claude/*
+CLAUDE.md

@@ -105,6 +105,10 @@ Agent                MCP Server           Gate Service          Executor
 git clone https://github.com/Grey-Line-Interactive/ROEGATE.git
 cd ROEGATE
 
+# Create a virtual environment with Python 3.10+
+python3.12 -m venv .venv
+source .venv/bin/activate    # On Windows: .venv\Scripts\activate
+
 # Install the package (makes the `roe-gate` CLI available)
 pip install -e .
 
@@ -118,7 +122,7 @@ After install, verify the CLI works:
 roe-gate --help
 ```
 
-> **Note:** If you're on macOS, the system Python may be 3.9. Use `python3.10+` or install via [pyenv](https://github.com/pyenv/pyenv) / [Homebrew](https://brew.sh) (`brew install python@3.12`). You can also run without installing: `python3 -m src --help`
+> **Note:** If you're on macOS, the system Python may be 3.9. Install Python 3.12 via [Homebrew](https://brew.sh) (`brew install python@3.12`) or [pyenv](https://github.com/pyenv/pyenv). A virtual environment is required on modern macOS — the commands above handle this. You can also run without installing: `python3.12 -m src --help`
 
 ### Define Your ROE
 
