@@ -23,7 +23,7 @@ judge:
 
 # Gate Service settings
 gate:
-  roe: "examples/corpsec_labs_roe.yaml" # path to the ROE YAML specification
+  roe: "examples/local_corp_roe.yaml"   # path to the ROE YAML specification
   port: 19990                         # HTTP API port
   signing: "hmac"                     # token signing: "hmac" or "ed25519"
   hitl: false                         # human-in-the-loop approval via dashboard
