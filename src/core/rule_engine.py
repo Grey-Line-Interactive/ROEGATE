@@ -122,10 +122,13 @@ class RuleEngine:
 
     @staticmethod
     def _parse_iso_datetime(s: str) -> datetime:
-        """Parse ISO 8601 datetime string, handling 'Z' suffix for Python <3.11."""
+        """Parse ISO 8601 datetime string, handling 'Z' suffix and naive datetimes."""
         if s.endswith("Z"):
             s = s[:-1] + "+00:00"
-        return datetime.fromisoformat(s)
+        dt = datetime.fromisoformat(s)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
 
     def _parse_schedule(self) -> None:
         """Pre-parse schedule constraints."""

@@ -37,8 +37,8 @@ roe:
 
   # ── Engagement Window ──────────────────────────────────────────────────────
   schedule:
-    valid_from: "2025-01-01T00:00:00"
-    valid_until: "2026-12-31T23:59:59"
+    valid_from: "2025-01-01T00:00:00+00:00"
+    valid_until: "2026-12-31T23:59:59+00:00"
     timezone: "UTC"
     blackout_windows: []        # e.g. "2025-06-01T08:00:00/2025-06-01T09:00:00"
 
