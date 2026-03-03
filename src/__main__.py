@@ -890,9 +890,9 @@ def main() -> None:
             "examples:\n"
             "  roe-gate creator                                    # build a ROE visually\n"
             "  roe-gate pentest --config roe_gate_config.yaml      # launch using config file\n"
-            "  roe-gate pentest --roe examples/acme_corp_roe.yaml  # launch with CLI flags\n"
+            "  roe-gate pentest --roe examples/local_corp_roe.yaml  # launch with CLI flags\n"
             "  roe-gate pentest --config conf.yaml --dashboard     # config + CLI override\n"
-            "  roe-gate validate examples/acme_corp_roe.yaml       # validate a ROE file\n"
+            "  roe-gate validate examples/local_corp_roe.yaml      # validate a ROE file\n"
             "  roe-gate demo                                       # see enforcement demo\n"
             "  roe-gate info                                       # show installed providers\n"
         ),

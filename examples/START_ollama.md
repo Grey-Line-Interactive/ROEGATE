@@ -122,8 +122,9 @@ No API keys or cloud accounts needed. Everything communicates with your local Ol
 ### Launch the Creator
 
 ```bash
-roe-gate pentest --dry-run --roe examples/localhost_webapp_roe.yaml --dashboard
-# Open: http://127.0.0.1:19990/creator
+roe-gate creator
+# Starts a local server and opens http://127.0.0.1:19990 in your browser
+# Press Ctrl+C when done
 ```
 
 ### Fill Out the Form

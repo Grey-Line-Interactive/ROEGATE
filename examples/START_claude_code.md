@@ -120,15 +120,9 @@ The **ROE Gate Creator** is a browser-based visual form builder that generates y
 ### Launch the Creator
 
 ```bash
-roe-gate info --creator
-# Opens http://127.0.0.1:19991 in your browser
-```
-
-Or start the gate service and navigate to `/creator`:
-
-```bash
-roe-gate pentest --dry-run --roe examples/localhost_webapp_roe.yaml --dashboard
-# Then visit: http://127.0.0.1:19990/creator
+roe-gate creator
+# Starts a local server and opens http://127.0.0.1:19990 in your browser
+# Press Ctrl+C when done
 ```
 
 ### Fill Out the Form

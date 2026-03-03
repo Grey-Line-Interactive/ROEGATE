@@ -213,8 +213,8 @@ roe:
 Or build one visually in your browser:
 
 ```bash
-roe-gate pentest --dry-run --roe examples/local_corp_roe.yaml --dashboard
-# Then open: http://127.0.0.1:19990/creator
+roe-gate creator
+# Opens http://127.0.0.1:19990 automatically. Press Ctrl+C when done.
 ```
 
 ### Launch
