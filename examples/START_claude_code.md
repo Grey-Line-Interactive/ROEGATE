@@ -186,13 +186,7 @@ Expected:
 
 ## Part 4 — Configure roe_gate_config.yaml
 
-Copy the template and edit it:
-
-```bash
-cp examples/roe_gate_config.yaml my_pentest_config.yaml
-```
-
-Edit `my_pentest_config.yaml`:
+Open `examples/roe_gate_config.yaml` directly and edit it:
 
 ```yaml
 # Pentest agent — Claude Code drives the test via MCP
@@ -228,7 +222,7 @@ gate:
 ### Dry Run (verify everything is wired up)
 
 ```bash
-roe-gate pentest --config my_pentest_config.yaml --dry-run
+roe-gate pentest --config examples/roe_gate_config.yaml --dry-run
 ```
 
 This starts the gate service and validates the configuration without launching the agent. You should see:
@@ -256,7 +250,7 @@ Press `Ctrl+C` to stop.
 ### Live Pentest
 
 ```bash
-roe-gate pentest --config my_pentest_config.yaml
+roe-gate pentest --config examples/roe_gate_config.yaml
 ```
 
 ROE Gate will:
@@ -275,7 +269,7 @@ Pass a specific objective to focus the agent:
 
 ```bash
 roe-gate pentest \
-  --config my_pentest_config.yaml \
+  --config examples/roe_gate_config.yaml \
   --objective "Perform a web application security assessment of webapp.corp.local. Start with port scanning and service enumeration, then test for OWASP Top 10 vulnerabilities. Prioritize SQL injection and authentication bypass."
 ```
 
@@ -283,16 +277,16 @@ roe-gate pentest \
 
 ```bash
 # Enable human-in-the-loop approval at runtime (overrides config)
-roe-gate pentest --config my_pentest_config.yaml --human-in-the-loop
+roe-gate pentest --config examples/roe_gate_config.yaml --human-in-the-loop
 
 # Verbose logging (see full gate decision details)
-roe-gate pentest --config my_pentest_config.yaml --verbose
+roe-gate pentest --config examples/roe_gate_config.yaml --verbose
 
 # Use a different port if 19990 is busy
-roe-gate pentest --config my_pentest_config.yaml --gate-port 19991
+roe-gate pentest --config examples/roe_gate_config.yaml --gate-port 19991
 
 # Use Ed25519 signing instead of HMAC
-roe-gate pentest --config my_pentest_config.yaml --signing-algo ed25519
+roe-gate pentest --config examples/roe_gate_config.yaml --signing-algo ed25519
 ```
 
 ---
@@ -336,10 +330,10 @@ When `hitl: true` is set (or `--human-in-the-loop` is passed), actions in the RO
 ### Enabling HITL
 
 ```bash
-roe-gate pentest --config my_pentest_config.yaml --human-in-the-loop
+roe-gate pentest --config examples/roe_gate_config.yaml --human-in-the-loop
 ```
 
-Or in `my_pentest_config.yaml`:
+Or in `examples/roe_gate_config.yaml`:
 ```yaml
 gate:
   hitl: true
@@ -447,7 +441,7 @@ Port 19990 may be in use. ROE Gate will auto-kill stale processes, but if it per
 
 ```bash
 lsof -ti :19990 | xargs kill -9
-roe-gate pentest --config my_pentest_config.yaml
+roe-gate pentest --config examples/roe_gate_config.yaml
 ```
 
 **`claude: command not found`**

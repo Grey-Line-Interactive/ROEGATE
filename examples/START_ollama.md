@@ -167,11 +167,7 @@ roe-gate validate examples/corpsec_labs_roe.yaml
 
 ## Part 4 — Configure roe_gate_config.yaml
 
-```bash
-cp examples/roe_gate_config.yaml my_pentest_config.yaml
-```
-
-Edit `my_pentest_config.yaml`:
+Open `examples/roe_gate_config.yaml` directly and edit it:
 
 ### Standard Ollama Config (llama3.1:8b for both)
 
@@ -274,7 +270,7 @@ ollama run llama3.1:8b "What is nmap used for? Answer in one sentence."
 ### Dry Run
 
 ```bash
-roe-gate pentest --config my_pentest_config.yaml --dry-run
+roe-gate pentest --config examples/roe_gate_config.yaml --dry-run
 ```
 
 Expected:
@@ -298,7 +294,7 @@ Expected:
 ### Live Pentest
 
 ```bash
-roe-gate pentest --config my_pentest_config.yaml
+roe-gate pentest --config examples/roe_gate_config.yaml
 ```
 
 > **Speed note:** Local models are slower than cloud APIs. Expect 5–20 seconds per agent turn depending on your hardware. The dashboard updates in real time as each decision comes in.
@@ -307,7 +303,7 @@ roe-gate pentest --config my_pentest_config.yaml
 
 ```bash
 roe-gate pentest \
-  --config my_pentest_config.yaml \
+  --config examples/roe_gate_config.yaml \
   --objective "Conduct a web application security assessment of webapp.corp.local (192.168.100.10). Perform reconnaissance, enumerate services, then test for SQL injection, XSS, and authentication bypass. Also test the API at api.corp.local (192.168.101.10) for common API vulnerabilities."
 ```
 
@@ -315,13 +311,13 @@ roe-gate pentest \
 
 ```bash
 # Use a different local model
-roe-gate pentest --config my_pentest_config.yaml --model mistral:7b
+roe-gate pentest --config examples/roe_gate_config.yaml --model mistral:7b
 
 # Enable human approval
-roe-gate pentest --config my_pentest_config.yaml --human-in-the-loop
+roe-gate pentest --config examples/roe_gate_config.yaml --human-in-the-loop
 
 # Verbose mode (see full gate decisions in terminal)
-roe-gate pentest --config my_pentest_config.yaml --verbose
+roe-gate pentest --config examples/roe_gate_config.yaml --verbose
 ```
 
 ---
@@ -353,13 +349,13 @@ Try running the same pentest with different models to compare reasoning quality:
 
 ```bash
 # Run with llama3.1:8b
-roe-gate pentest --config my_pentest_config.yaml --model llama3.1:8b
+roe-gate pentest --config examples/roe_gate_config.yaml --model llama3.1:8b
 
 # Export the audit log
 curl -o audit_llama31_8b.csv http://127.0.0.1:19990/api/v1/audit/export
 
 # Run again with mistral:7b
-roe-gate pentest --config my_pentest_config.yaml --model mistral:7b
+roe-gate pentest --config examples/roe_gate_config.yaml --model mistral:7b
 curl -o audit_mistral_7b.csv http://127.0.0.1:19990/api/v1/audit/export
 ```
 
@@ -376,7 +372,7 @@ The red **Emergency Halt** button denies all further tool calls. Essential to ha
 HITL is especially useful with local models since they may require more human oversight.
 
 ```bash
-roe-gate pentest --config my_pentest_config.yaml --human-in-the-loop
+roe-gate pentest --config examples/roe_gate_config.yaml --human-in-the-loop
 ```
 
 When the agent requests a critical action, the dashboard shows it in amber:
@@ -436,7 +432,7 @@ Local models respond better to explicit, structured objectives:
 
 ```bash
 roe-gate pentest \
-  --config my_pentest_config.yaml \
+  --config examples/roe_gate_config.yaml \
   --objective "You are a penetration tester. Follow these steps IN ORDER:
 1. Run nmap against 192.168.100.10 to find open ports and services
 2. Use gobuster to enumerate directories on port 80
@@ -517,10 +513,10 @@ Local 7B/8B models occasionally get stuck. Try:
 
 ```bash
 # Use a larger model
-roe-gate pentest --config my_pentest_config.yaml --model llama3.3:70b
+roe-gate pentest --config examples/roe_gate_config.yaml --model llama3.3:70b
 
 # Or use a clearer, step-by-step objective
-roe-gate pentest --config my_pentest_config.yaml \
+roe-gate pentest --config examples/roe_gate_config.yaml \
   --objective "Step 1: Run nmap -sV 192.168.100.10. Step 2: Run gobuster. Step 3: ..."
 ```
 

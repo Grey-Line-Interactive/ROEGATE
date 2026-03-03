@@ -169,9 +169,7 @@ roe-gate validate examples/corpsec_labs_roe.yaml
 
 ## Part 4 — Configure roe_gate_config.yaml
 
-```bash
-cp examples/roe_gate_config.yaml my_pentest_config.yaml
-```
+Open `examples/roe_gate_config.yaml` directly and edit it.
 
 ### Standard OpenAI (GPT-4o)
 
@@ -254,7 +252,7 @@ gate:
 ### Dry Run
 
 ```bash
-roe-gate pentest --config my_pentest_config.yaml --dry-run
+roe-gate pentest --config examples/roe_gate_config.yaml --dry-run
 ```
 
 Expected:
@@ -277,14 +275,14 @@ Expected:
 ### Live Pentest
 
 ```bash
-roe-gate pentest --config my_pentest_config.yaml
+roe-gate pentest --config examples/roe_gate_config.yaml
 ```
 
 ### Custom Objective
 
 ```bash
 roe-gate pentest \
-  --config my_pentest_config.yaml \
+  --config examples/roe_gate_config.yaml \
   --objective "Perform a comprehensive web application security test of webapp.corp.local (192.168.100.10) and the REST API at api.corp.local (192.168.101.10). Start with reconnaissance, then test for SQL injection, XSS, broken authentication, and API security issues. Document all findings."
 ```
 
@@ -292,13 +290,13 @@ roe-gate pentest \
 
 ```bash
 # Use GPT-4o-mini tester for faster/cheaper runs
-roe-gate pentest --config my_pentest_config.yaml --model gpt-4o-mini
+roe-gate pentest --config examples/roe_gate_config.yaml --model gpt-4o-mini
 
 # Enable human approval for critical actions
-roe-gate pentest --config my_pentest_config.yaml --human-in-the-loop
+roe-gate pentest --config examples/roe_gate_config.yaml --human-in-the-loop
 
 # Use a different port
-roe-gate pentest --config my_pentest_config.yaml --gate-port 19991
+roe-gate pentest --config examples/roe_gate_config.yaml --gate-port 19991
 ```
 
 ---
@@ -341,7 +339,7 @@ The red **Emergency Halt** button denies all further tool calls instantly. Use i
 ## Part 7 — Human-in-the-Loop (HITL) Approval
 
 ```bash
-roe-gate pentest --config my_pentest_config.yaml --human-in-the-loop
+roe-gate pentest --config examples/roe_gate_config.yaml --human-in-the-loop
 ```
 
 When GPT-4o requests a critical action (e.g., exploiting a critical CVE, credential stuffing beyond limits), the dashboard shows it in amber:

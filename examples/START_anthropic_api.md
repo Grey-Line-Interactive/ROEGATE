@@ -150,11 +150,7 @@ roe-gate validate examples/corpsec_labs_roe.yaml
 
 ## Part 4 — Configure roe_gate_config.yaml
 
-```bash
-cp examples/roe_gate_config.yaml my_pentest_config.yaml
-```
-
-Edit `my_pentest_config.yaml` for the Anthropic API:
+Open `examples/roe_gate_config.yaml` directly and edit it for the Anthropic API:
 
 ```yaml
 # Pentest agent — Anthropic API drives the test
@@ -189,7 +185,7 @@ gate:
 ### Dry Run
 
 ```bash
-roe-gate pentest --config my_pentest_config.yaml --dry-run
+roe-gate pentest --config examples/roe_gate_config.yaml --dry-run
 ```
 
 You should see:
@@ -213,14 +209,14 @@ You should see:
 ### Live Pentest
 
 ```bash
-roe-gate pentest --config my_pentest_config.yaml
+roe-gate pentest --config examples/roe_gate_config.yaml
 ```
 
 ### Custom Objective
 
 ```bash
 roe-gate pentest \
-  --config my_pentest_config.yaml \
+  --config examples/roe_gate_config.yaml \
   --objective "Assess the security of webapp.corp.local (192.168.100.10). Begin with reconnaissance, enumerate services, then test for OWASP Top 10 vulnerabilities. Also assess api.corp.local (192.168.101.10) for API security issues."
 ```
 
@@ -230,13 +226,13 @@ Any flag on the CLI overrides the config file:
 
 ```bash
 # Switch to a faster/cheaper model for tester
-roe-gate pentest --config my_pentest_config.yaml --model claude-haiku-4-5
+roe-gate pentest --config examples/roe_gate_config.yaml --model claude-haiku-4-5
 
 # Enable HITL approval on the fly
-roe-gate pentest --config my_pentest_config.yaml --human-in-the-loop
+roe-gate pentest --config examples/roe_gate_config.yaml --human-in-the-loop
 
 # Change the gate port
-roe-gate pentest --config my_pentest_config.yaml --gate-port 19991
+roe-gate pentest --config examples/roe_gate_config.yaml --gate-port 19991
 ```
 
 ---
@@ -281,7 +277,7 @@ The **Emergency Halt** button (top right, red) immediately sets the gate to deny
 Enable HITL to manually approve critical actions before they execute.
 
 ```bash
-roe-gate pentest --config my_pentest_config.yaml --human-in-the-loop
+roe-gate pentest --config examples/roe_gate_config.yaml --human-in-the-loop
 ```
 
 Or set in config:
@@ -393,7 +389,7 @@ Or use a Tier 2+ Anthropic account for higher rate limits.
 **Gate port conflict**
 
 ```bash
-roe-gate pentest --config my_pentest_config.yaml --gate-port 19991
+roe-gate pentest --config examples/roe_gate_config.yaml --gate-port 19991
 ```
 
 ---
