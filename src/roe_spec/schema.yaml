@@ -105,7 +105,7 @@ properties:
       # ─── ACTIONS ────────────────────────────────────────────────
       actions:
         type: object
-        required: [allowed, denied]
+        required: [allowed]
         properties:
           allowed:
             type: array
@@ -288,6 +288,10 @@ $defs:
           - wireless
           - cloud
           - direct_database_access
+          - file_access
+          - command_execution
+          - network_connect
+          - other
           - any
       methods:
         type: array

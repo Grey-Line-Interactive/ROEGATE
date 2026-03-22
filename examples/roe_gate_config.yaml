@@ -32,6 +32,14 @@ gate:
   # rbac: false                       # role-based access control
   # slack_webhook: ""                 # Slack incoming webhook URL for alerts
   # webhook_url: ""                   # generic webhook URL for alerts
+  # roe_dir: ""                       # Directory of ROE YAML files for multi-ROE
+  # alert_min_level: "info"           # Minimum alert severity: info, warning, critical
+  # ha_peers:                         # HA cluster peer addresses
+  #   - "10.0.0.2:19990"
+  # branding:                         # Dashboard branding overrides
+  #   company_name: "Acme Security"
+  #   primary_color: "#00ff41"
+  #   dashboard_title: "Security Dashboard"
 
 # Pentest objective (passed to the agent as context)
 objective: |

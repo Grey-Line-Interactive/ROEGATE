@@ -6,10 +6,10 @@
 
 <p align="center"><strong>The first reference monitor for autonomous AI penetration testing agents.</strong></p>
 
-[![Version](https://img.shields.io/badge/version-0.1.0-blue)](https://github.com/Grey-Line-Interactive/ROEGATE)
+[![Version](https://img.shields.io/badge/version-0.2.0-blue)](https://github.com/Grey-Line-Interactive/ROEGATE)
 [![Python](https://img.shields.io/badge/python-3.10%2B-green)](https://www.python.org)
 [![License](https://img.shields.io/badge/license-MIT-brightgreen)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-270%20passing-brightgreen)](tests/)
+[![Tests](https://img.shields.io/badge/tests-545%20passing-brightgreen)](tests/)
 
 > **Patent Pending** (U.S. Provisional Application No. 63/993,983) — ROE Gate implements a novel architecture for constraining autonomous security testing agents. See [roegate.io](https://roegate.io) for the white paper.
 
@@ -76,7 +76,7 @@ This is not another wrapper around an LLM. This is not a prompt that says "pleas
 
 | # | Component | What It Does |
 |---|-----------|-------------|
-| **1** | **Action Intent Serializer** | Every tool call is converted to a structured ActionIntent — tool-agnostic, machine-readable, auditable. 21 action categories cover every pentest technique. |
+| **1** | **Action Intent Serializer** | Every tool call is converted to a structured ActionIntent — tool-agnostic, machine-readable, auditable. 24 action categories cover every pentest technique. |
 | **2** | **ROE Specification Language** | Human-readable YAML that defines scope, allowed actions, denied actions, schedules, data handling, and emergency procedures. Your contract, as code. |
 | **3** | **Deterministic Rule Engine** | Eight evaluation checks in strict priority order: schedule, scope (IP/domain/service), hard-deny, approval gates, action constraints, hard-allow, and fallback. Same input = same output. No LLM involved. Handles ~80% of decisions. |
 | **4** | **Isolated Judge LLM** | A separate LLM instance with **no access** to the agent's context, reasoning, or conversation history evaluates edge cases. It sees only the action and the policy. The agent cannot influence the judge. |
@@ -133,6 +133,25 @@ Agent                MCP Server           Gate Service          Executor
   │ {nmap output}        │ {stdout, rc}         │                   │
   │◄─────────────────────│◄─────────────────────│   AUDIT LOGGED    │
 ```
+
+### Real-Time Audit Dashboard
+
+Every evaluation, every decision, every token — live in your browser with 7 tabs.
+
+<p align="center">
+  <img src="assets/dashboard.png" alt="ROE Gate Dashboard — Decision Log with ALLOW and DENY verdicts" width="900">
+</p>
+<p align="center"><em>Decision Log — category and tool breakdowns, filter bar, detail drawer, live refresh</em></p>
+
+<p align="center">
+  <img src="assets/dashboard-compliance.png" alt="ROE Gate Dashboard — SOC 2 Compliance Report" width="900">
+</p>
+<p align="center"><em>Compliance tab — generate SOC 2 Type II and PCI-DSS reports with evidence, download JSON</em></p>
+
+<p align="center">
+  <img src="assets/dashboard-scope.png" alt="ROE Gate Dashboard — ROE Scope viewer" width="900">
+</p>
+<p align="center"><em>ROE Scope — in-scope and out-of-scope networks, domains, schedule, and constraints</em></p>
 
 ---
 
@@ -217,6 +236,11 @@ roe-gate creator
 # Opens http://127.0.0.1:19990 automatically. Press Ctrl+C when done.
 ```
 
+<p align="center">
+  <img src="assets/roecreator.png" alt="ROE Creator — fully populated form with CorpSec Labs engagement and live YAML preview" width="900">
+</p>
+<p align="center"><em>ROE Creator — 10-section form builder with live YAML preview, validation, and export</em></p>
+
 ### Launch
 
 ```bash
@@ -229,8 +253,9 @@ roe-gate pentest --roe examples/local_corp_roe.yaml
 # With the real-time audit dashboard
 roe-gate pentest --roe examples/local_corp_roe.yaml --dashboard
 
-# Config file + CLI override (CLI flags take priority)
-roe-gate pentest --config examples/roe_gate_config.yaml --judge mock
+# With multi-ROE, alerting, and HA clustering
+roe-gate pentest --roe examples/local_corp_roe.yaml --roe-dir extra_roes/ \
+    --slack-webhook https://hooks.slack.com/... --ha-peers 10.0.0.2:19990
 
 # Dry run — start the gate service and print config without launching the agent
 roe-gate pentest --roe examples/local_corp_roe.yaml --dry-run
@@ -300,10 +325,71 @@ This catches bypass attempts through Python, Perl, Ruby, bash redirections (`/de
 Enable HITL mode for actions that require human approval:
 
 ```bash
-roe-gate pentest --roe my_roe.yaml --hitl
+roe-gate pentest --roe my_roe.yaml --human-in-the-loop --dashboard
 ```
 
-When the gate encounters a `REQUIRE_APPROVAL` action, it pauses and waits for human sign-off via the dashboard or API.
+When the gate encounters an out-of-scope action, it pauses and presents APPROVE/DENY buttons on the dashboard, waiting for human sign-off before proceeding.
+
+---
+
+## Feature Modules
+
+All feature modules are included and fully wired with CLI flags, config file support, and dashboard UI:
+
+| Module | What It Does | CLI Flags | Dashboard |
+|--------|-------------|-----------|-----------|
+| **Multi-ROE** | Load and manage multiple ROE specifications simultaneously | `--roe-dir PATH` | ROE Management tab |
+| **Alerting** | Real-time Slack and webhook notifications on denials/escalations | `--slack-webhook URL`, `--webhook-url URL`, `--alert-min-level` | Alerts tab |
+| **RBAC** | Role-based access control on all API endpoints | `--rbac` | — |
+| **Compliance** | SOC 2 Type II and PCI-DSS report generation from audit data | `roe-gate compliance` subcommand | Compliance tab |
+| **HA Cluster** | High-availability clustering with leader election | `--ha-peers HOST:PORT ...` | Settings tab |
+| **Multi-Tenant** | Tenant isolation for managed security providers | — | Settings tab |
+| **Branding** | White-label dashboard and report customization | `--branding-config PATH` | Settings tab |
+
+### Configuration File
+
+All settings can be managed via a single YAML config file:
+
+```yaml
+gate:
+  roe: "examples/corpsec_labs_roe.yaml"
+  port: 19990
+  dashboard: true
+  rbac: false
+  slack_webhook: ""
+  webhook_url: ""
+  roe_dir: ""                  # Directory of ROE YAML files for multi-ROE
+  alert_min_level: "info"      # Minimum alert severity: info, warning, critical
+  ha_peers:                    # HA cluster peer addresses
+    - "10.0.0.2:19990"
+  branding:                    # Dashboard branding overrides
+    company_name: "Acme Security"
+    primary_color: "#00ff41"
+    dashboard_title: "Security Dashboard"
+```
+
+---
+
+## Dashboard
+
+The real-time audit dashboard at `/dashboard` provides 7 tabs:
+
+| Tab | What It Shows |
+|---|---|
+| **Decision Log** | Filterable event stream with click-to-expand detail drawer showing rule engine verdict, judge LLM reasoning, impact assessment, and token info |
+| **ROE Scope** | Active ROE spec: schedule, in/out-of-scope networks and domains, denied categories, constraints |
+| **Trends** | Time-bucketed allow/deny bar chart (20-min window, 2-min buckets) with rolling allow rate |
+| **Compliance** | Generate SOC 2 / PCI-DSS reports inline with status badges, evidence lists, and JSON download |
+| **ROE Management** | Table of loaded ROEs with add/archive actions |
+| **Alerts** | Alerting configuration status: Slack, webhooks, min level, total alerters |
+| **Settings** | HA cluster status, branding configuration, tenant management |
+
+Additional features: filter toggles (ALLOW/DENY/HALT/ESCALATE), text search, category dropdown, category and tool breakdowns, HITL approval panel, configurable refresh interval (1s/2s/5s/10s), CSV/JSON export, and emergency halt button.
+
+<p align="center">
+  <img src="assets/dashboard-alerts.png" alt="ROE Gate Dashboard — Alerts tab" width="900">
+</p>
+<p align="center"><em>Alerts tab — Slack connected, webhook count, minimum severity level</em></p>
 
 ---
 
@@ -391,16 +477,73 @@ pip install -e ".[all-providers]"
 ## CLI Reference
 
 ```bash
-roe-gate pentest --config <config.yaml>    # Launch using config file (recommended)
-roe-gate pentest --roe <file>              # Launch with individual CLI flags
-roe-gate pentest --roe <file> --dashboard  # Same, with real-time audit dashboard
-roe-gate pentest --roe <file> --dry-run    # Start gate service only, print config
-roe-gate pentest --roe <file> --hitl       # Enable human-in-the-loop approval
-roe-gate creator                           # Open the ROE Creator web form
-roe-gate validate <file>                   # Validate a ROE specification file
-roe-gate demo                              # Run the built-in demo scenario
-roe-gate info                              # Print system info and available providers
+# Pentest sessions
+roe-gate pentest --config <config.yaml>               # Launch using config file (recommended)
+roe-gate pentest --roe <file>                          # Launch with CLI flags
+roe-gate pentest --roe <file> --dashboard              # With real-time audit dashboard
+roe-gate pentest --roe <file> --dry-run                # Start gate service only
+roe-gate pentest --roe <file> --human-in-the-loop      # Enable HITL approval
+roe-gate pentest --roe <file> --roe-dir <dir>          # Load additional ROEs from directory
+roe-gate pentest --roe <file> --ha-peers h1:p1 h2:p2   # HA clustering
+roe-gate pentest --roe <file> --slack-webhook <url>    # Slack alerting
+roe-gate pentest --roe <file> --alert-min-level warning  # Set alert threshold
+roe-gate pentest --roe <file> --branding-config <file> # Custom dashboard branding
+
+# Compliance reports
+roe-gate compliance --roe <file> --format soc2         # Generate SOC 2 report (stdout)
+roe-gate compliance --roe <file> --format pci-dss      # Generate PCI-DSS report (stdout)
+roe-gate compliance --roe <file> --format soc2 --output report.json  # Write to file
+roe-gate compliance --roe <file> --format soc2 --gate-url http://127.0.0.1:19990  # With live audit data
+
+# Other commands
+roe-gate creator                                       # Open ROE Creator web form
+roe-gate validate <file>                               # Validate a ROE specification
+roe-gate validate <file> --strict                      # Treat warnings as errors
+roe-gate demo                                          # Run the built-in demo
+roe-gate info                                          # Print system info and providers
 ```
+
+---
+
+## API Endpoints
+
+### Core
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/v1/evaluate` | Evaluate an ActionIntent against the ROE |
+| `POST` | `/api/v1/execute` | Execute an approved action with a valid token |
+| `GET` | `/api/v1/stats` | Gate statistics |
+| `GET` | `/api/v1/audit` | Audit trail events |
+| `GET` | `/api/v1/audit/export` | Export audit log as CSV |
+| `POST` | `/api/v1/halt` | Trigger emergency halt |
+| `POST` | `/api/v1/resume` | Resume a halted session |
+| `GET` | `/api/v1/health` | Health check / readiness probe |
+| `GET` | `/dashboard` | Real-time audit dashboard (7 tabs) |
+
+### Feature Modules
+
+| Method | Endpoint | Module |
+|---|---|---|
+| `GET` | `/api/v1/alerting/status` | Alerting — configuration status |
+| `GET` | `/api/v1/roe/list` | Multi-ROE — list loaded specs |
+| `POST` | `/api/v1/roe/add` | Multi-ROE — add specification |
+| `POST` | `/api/v1/roe/archive` | Multi-ROE — archive specification |
+| `GET` | `/api/v1/compliance/soc2` | Compliance — SOC 2 report |
+| `GET` | `/api/v1/compliance/pci-dss` | Compliance — PCI-DSS report |
+| `GET` | `/api/v1/cluster/status` | HA — cluster status |
+| `GET` | `/api/v1/tenants` | Tenant — list tenants |
+| `POST` | `/api/v1/tenants/create` | Tenant — create tenant |
+| `GET` | `/api/v1/branding` | Branding — configuration |
+| `GET` | `/api/v1/public-key` | Ed25519 public key export |
+
+### HITL Approval
+
+| Method | Endpoint |
+|---|---|
+| `GET` | `/api/v1/approvals/pending` |
+| `GET` | `/api/v1/approvals/{id}/status` |
+| `POST` | `/api/v1/approvals/{id}/respond` |
 
 ---
 
@@ -408,17 +551,33 @@ roe-gate info                              # Print system info and available pro
 
 ```
 src/
-├── core/           # Rule engine, judge LLM, action intents, LLM providers
-├── gate/           # Gate orchestrator (evaluate → sign → execute pipeline)
-├── crypto/         # HMAC-SHA256 and Ed25519 token signing/verification
-├── service/        # HTTP API server, MCP server, dashboard, ROE creator
-├── tools/          # Tool executor with token verification
-├── audit/          # Event logging
-├── agents/         # Agent framework and config
-└── licensing/      # Tier definitions
+├── core/               # Rule engine, judge LLM, action intents, LLM providers
+├── gate/               # Gate orchestrator (evaluate → sign → execute pipeline)
+├── crypto/             # HMAC-SHA256 and Ed25519 token signing/verification
+├── service/
+│   ├── gate_api.py     # HTTP API server + 7-tab audit dashboard
+│   ├── mcp_server.py   # MCP server (7 gated tools)
+│   ├── roe_creator.py  # ROE Creator web form (10 sections, 24 categories)
+│   ├── multi_roe.py    # Multi-ROE management
+│   ├── alerting.py     # Slack/webhook alerting
+│   ├── ha.py           # HA clustering with leader election
+│   ├── tenant.py       # Multi-tenant isolation
+│   └── branding.py     # White-label branding
+├── roe_spec/
+│   ├── schema.yaml     # ROE-SL JSON Schema (24 action categories)
+│   └── validator.py    # Three-level ROE spec validator
+├── audit/
+│   ├── logger.py       # Append-only audit logger
+│   └── compliance.py   # SOC 2 / PCI-DSS report generator
+├── auth/
+│   └── rbac.py         # Role-based access control
+├── tools/              # Tool executor with token verification
+├── hooks/              # PreToolUse bash gate hook
+├── agents/             # Agent framework and GateConfig dataclass
+└── licensing/          # Tier definitions (no-op — all features included)
 
-examples/           # ROE specs, agent configs, launch scripts
-tests/              # 270 tests
+examples/               # ROE specs, config files, start guides
+tests/                  # 545 tests
 ```
 
 ## Tests
@@ -430,23 +589,15 @@ python -m pytest tests/ -v
 
 ---
 
-## Commercial Licensing
-
-The **Community Edition** is free and MIT-licensed for personal use, research, learning, and CTFs. It includes the full gate engine with no feature restrictions.
-
-**Commercial use** by organizations requires a paid license:
-
-| Tier | For | Includes |
-|---|---|---|
-| **Pro** | Security teams running AI agents on live engagements | Multi-ROE management, structured audit logging, alerting |
-| **Enterprise** | Large organizations with multiple teams | Unlimited ROEs, custom integrations, dedicated support, SLA |
-| **MSSP/OEM** | Managed security providers and vendors | Multi-tenant, white-label, patent license for redistribution |
-
-> **Ready to run AI agents on real engagements?** Visit **[roegate.io](https://roegate.io)** for the white paper, architecture deep-dive, and commercial licensing. To request a Pro, Enterprise, or MSSP license, contact **[rick@greylineinteractive.com](mailto:rick@greylineinteractive.com)**.
-
 ## License
 
-[MIT](LICENSE) — See license for usage terms.
+[MIT](LICENSE) — All features included.
+
+**Free** for individuals, researchers, students, CTFs, and internal security teams testing their own infrastructure.
+
+**License required** for security consultancies testing client systems, MSSPs/MDR providers, and vendors embedding or white-labeling ROE Gate. Contact **[rick@greylineinteractive.com](mailto:rick@greylineinteractive.com)** to discuss.
+
+> Visit **[roegate.io](https://roegate.io)** for the white paper and architecture deep-dive.
 
 ---
 

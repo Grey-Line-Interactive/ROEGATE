@@ -45,123 +45,38 @@ def _load_yaml(path: str) -> dict[str, Any]:
 
 def cmd_validate(args: argparse.Namespace) -> None:
     """Validate a ROE YAML specification file."""
+    from src.roe_spec.validator import validate_roe_file
+
     print(f"Validating: {args.roe_file}")
     print()
 
-    data = _load_yaml(args.roe_file)
+    result = validate_roe_file(args.roe_file)
 
-    # Check top-level 'roe' key
-    if "roe" not in data:
-        print("[FAIL] Missing top-level 'roe' key.")
-        print("  The ROE specification must be nested under a 'roe:' key.")
-        sys.exit(1)
+    passed = [i for i in result.issues if i.level == "info"]
+    warnings = result.warnings
+    errors = result.errors
 
-    roe = data["roe"]
-    errors: list[str] = []
-    warnings: list[str] = []
-    passed: list[str] = []
-
-    # --- Required sections ---
-    required_sections = ["metadata", "scope", "actions"]
-    for section in required_sections:
-        if section not in roe:
-            errors.append(f"Missing required section: '{section}'")
-        else:
-            passed.append(f"Required section '{section}' is present")
-
-    # --- Metadata checks ---
-    if "metadata" in roe:
-        metadata = roe["metadata"]
-        for field in ("engagement_id", "client"):
-            if field in metadata and metadata[field]:
-                passed.append(f"metadata.{field} = {metadata[field]!r}")
-            else:
-                warnings.append(f"metadata.{field} is missing or empty")
-        if "version" in metadata:
-            passed.append(f"metadata.version = {metadata['version']}")
-        else:
-            warnings.append("metadata.version is not set")
-
-    # --- Scope checks ---
-    if "scope" in roe:
-        scope = roe["scope"]
-        if "in_scope" in scope:
-            in_scope = scope["in_scope"]
-            scope_types = []
-            if "networks" in in_scope and in_scope["networks"]:
-                scope_types.append(f"{len(in_scope['networks'])} network(s)")
-            if "domains" in in_scope and in_scope["domains"]:
-                scope_types.append(f"{len(in_scope['domains'])} domain(s)")
-            if "services" in in_scope and in_scope["services"]:
-                scope_types.append(f"{len(in_scope['services'])} service(s)")
-            if scope_types:
-                passed.append(f"scope.in_scope defines: {', '.join(scope_types)}")
-            else:
-                warnings.append("scope.in_scope has no networks, domains, or services defined")
-        else:
-            errors.append("scope.in_scope is missing")
-
-        if "out_of_scope" not in scope:
-            warnings.append("scope.out_of_scope is not defined (recommended)")
-        else:
-            passed.append("scope.out_of_scope is defined")
-
-    # --- Actions checks ---
-    if "actions" in roe:
-        actions = roe["actions"]
-        if "allowed" in actions and actions["allowed"]:
-            categories = [a.get("category", "?") for a in actions["allowed"]]
-            passed.append(f"actions.allowed: {len(categories)} categories ({', '.join(categories)})")
-        else:
-            warnings.append("actions.allowed is empty or missing")
-
-        if "denied" in actions and actions["denied"]:
-            categories = [d.get("category", "?") for d in actions["denied"]]
-            passed.append(f"actions.denied: {len(categories)} categories ({', '.join(categories)})")
-        else:
-            warnings.append("actions.denied is empty or missing (recommended to explicitly deny dangerous categories)")
-
-        if "requires_approval" in actions and actions["requires_approval"]:
-            passed.append(f"actions.requires_approval: {len(actions['requires_approval'])} rule(s)")
-
-    # --- Optional but recommended sections ---
-    optional_sections = ["schedule", "data_handling", "constraints", "emergency"]
-    for section in optional_sections:
-        if section in roe:
-            passed.append(f"Optional section '{section}' is present")
-        else:
-            warnings.append(f"Optional section '{section}' is not defined (recommended)")
-
-    # --- Emergency checks ---
-    if "emergency" in roe:
-        emergency = roe["emergency"]
-        if emergency.get("kill_switch"):
-            passed.append("emergency.kill_switch is enabled")
-        else:
-            warnings.append("emergency.kill_switch is not enabled (strongly recommended)")
-        if "max_consecutive_denials" in emergency:
-            passed.append(f"emergency.max_consecutive_denials = {emergency['max_consecutive_denials']}")
-
-    # --- Print results ---
-    print(f"  Passed:   {len(passed)}")
-    print(f"  Warnings: {len(warnings)}")
     print(f"  Errors:   {len(errors)}")
+    print(f"  Warnings: {len(warnings)}")
     print()
-
-    if passed:
-        for item in passed:
-            print(f"  [PASS] {item}")
-    print()
-
-    if warnings:
-        for item in warnings:
-            print(f"  [WARN] {item}")
-        print()
 
     if errors:
         for item in errors:
-            print(f"  [FAIL] {item}")
+            print(f"  [FAIL] [{item.code}] {item.path}: {item.message}")
         print()
+
+    if warnings:
+        for item in warnings:
+            print(f"  [WARN] [{item.code}] {item.path}: {item.message}")
+        print()
+
+    if passed:
+        for item in passed:
+            print(f"  [INFO] [{item.code}] {item.path}: {item.message}")
+        print()
+
+    strict = getattr(args, "strict", False)
+    if errors or (strict and warnings):
         print("Validation FAILED.")
         sys.exit(1)
     else:
@@ -499,6 +414,16 @@ def cmd_pentest(args: argparse.Namespace) -> None:
             args.slack_webhook = config.gate.slack_webhook or None
         if not args.webhook_url:
             args.webhook_url = config.gate.webhook_url or None
+        if not args.roe_dir:
+            args.roe_dir = config.gate.roe_dir or None
+        if not args.alert_min_level:
+            lvl = config.gate.alert_min_level
+            args.alert_min_level = lvl if lvl and lvl != "info" else None
+        if not args.ha_peers and config.gate.ha_peers:
+            args.ha_peers = config.gate.ha_peers
+        if not args.branding_config and config.gate.branding:
+            # Store raw branding dict from config for forwarding
+            args._branding_dict = config.gate.branding
 
     if not args.roe:
         print("Error: --roe is required (provide via CLI or in config file under gate.roe)")
@@ -590,6 +515,25 @@ def cmd_pentest(args: argparse.Namespace) -> None:
         gate_cmd.extend(["--slack-webhook", args.slack_webhook])
     if args.webhook_url:
         gate_cmd.extend(["--webhook-url", args.webhook_url])
+    if args.ha_peers:
+        gate_cmd.append("--ha-peers")
+        gate_cmd.extend(args.ha_peers)
+    if args.roe_dir:
+        gate_cmd.extend(["--roe-dir", args.roe_dir])
+    if args.alert_min_level:
+        gate_cmd.extend(["--alert-min-level", args.alert_min_level])
+    if args.branding_config:
+        gate_cmd.extend(["--branding-config", args.branding_config])
+    elif hasattr(args, "_branding_dict") and args._branding_dict:
+        # Write branding dict from config to a temp file for gate subprocess
+        import tempfile
+        import yaml
+        _brand_tmp = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", prefix="roe_branding_", delete=False,
+        )
+        yaml.dump({"branding": args._branding_dict}, _brand_tmp)
+        _brand_tmp.close()
+        gate_cmd.extend(["--branding-config", _brand_tmp.name])
 
     gate_proc = subprocess.Popen(
         gate_cmd,
@@ -785,6 +729,60 @@ def cmd_pentest(args: argparse.Namespace) -> None:
     print("  Done.")
 
 
+def cmd_compliance(args: argparse.Namespace) -> None:
+    """Generate a compliance report from a ROE spec and optional live gate data."""
+    from .audit.compliance import ComplianceReportGenerator, ComplianceReport
+    from .audit.logger import AuditEvent
+
+    roe_data = _load_yaml(args.roe)
+    if "roe" not in roe_data:
+        print("Error: ROE file missing top-level 'roe' key.")
+        sys.exit(1)
+    roe_spec = roe_data["roe"]
+    engagement_id = roe_spec.get("metadata", {}).get("engagement_id", "UNKNOWN")
+
+    # Optionally fetch live audit data from a running gate
+    audit_events: list[AuditEvent] = []
+    if args.gate_url:
+        import urllib.request
+        try:
+            req = urllib.request.Request(f"{args.gate_url}/api/v1/audit")
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                audit_data = json.loads(resp.read().decode())
+            for e in audit_data.get("events", []):
+                audit_events.append(AuditEvent(
+                    event_id=e.get("event_id", ""),
+                    timestamp=e.get("timestamp", ""),
+                    event_type=e.get("event_type", ""),
+                    details=e.get("details", {}),
+                ))
+        except Exception as exc:
+            print(f"Warning: Could not fetch audit data from {args.gate_url}: {exc}")
+
+    generator = ComplianceReportGenerator(
+        audit_events=audit_events,
+        roe_spec=roe_spec,
+        engagement_id=engagement_id,
+    )
+
+    if args.format == "soc2":
+        report = generator.generate_soc2()
+    else:
+        report = generator.generate_pci_dss()
+
+    if args.output:
+        output_path = Path(args.output)
+        if output_path.suffix == ".json":
+            content = ComplianceReportGenerator.to_json(report)
+        else:
+            content = ComplianceReportGenerator.to_text(report)
+        with open(output_path, "w") as f:
+            f.write(content)
+        print(f"Report written to {output_path}")
+    else:
+        print(ComplianceReportGenerator.to_text(report))
+
+
 def cmd_creator(args: argparse.Namespace) -> None:
     """Launch the ROE Creator Dashboard as a standalone server."""
     import http.server
@@ -840,9 +838,23 @@ def cmd_info(args: argparse.Namespace) -> None:
     print()
 
     # Check available providers
-    print("Available LLM Providers:")
+    print("Judge LLM Providers:")
     print()
 
+    # Built-in providers (no extra install needed)
+    import shutil
+    claude_path = shutil.which("claude")
+    if claude_path:
+        print(f"  [ready]          ClaudeCLIProvider  (claude found at {claude_path})")
+    else:
+        print(f"  [not found]      ClaudeCLIProvider  (install Claude Code: https://claude.com/download)")
+    print(f"  [built-in]       MockProvider  (deterministic, for testing)")
+    print(f"  [built-in]       HybridProvider")
+
+    # Optional providers (require extras)
+    print()
+    print("  Optional (install for additional provider support):")
+    print()
     providers = [
         ("AnthropicProvider", "anthropic", "pip install roe-agent-gate[anthropic]"),
         ("OpenAIProvider", "openai", "pip install roe-agent-gate[openai]"),
@@ -851,8 +863,6 @@ def cmd_info(args: argparse.Namespace) -> None:
         ("LlamaCppProvider", "llama_cpp", "pip install roe-agent-gate[llama-cpp]"),
     ]
 
-    always_available = ["HybridProvider"]
-
     for name, module, install in providers:
         try:
             __import__(module)
@@ -860,23 +870,16 @@ def cmd_info(args: argparse.Namespace) -> None:
         except ImportError:
             print(f"  [not installed]  {name}  ({install})")
 
-    for name in always_available:
-        print(f"  [built-in]       {name}")
-
     print()
 
-    # Check core dependencies
-    print("Core Dependencies:")
+    # Check Claude Code (the primary integration)
+    print("Claude Code Integration:")
     print()
-    core_deps = [("pyyaml", "yaml"), ("pytest", "pytest")]
-    for label, module in core_deps:
-        try:
-            mod = __import__(module)
-            version = getattr(mod, "__version__", "unknown")
-            print(f"  [installed]      {label} ({version})")
-        except ImportError:
-            print(f"  [not installed]  {label}")
-
+    if claude_path:
+        print(f"  [ready]          claude CLI found — roe-gate pentest will work out of the box")
+    else:
+        print(f"  [action needed]  claude CLI not found on $PATH")
+        print(f"                   Install: https://claude.com/download")
     print()
 
 
@@ -892,6 +895,8 @@ def main() -> None:
             "  roe-gate pentest --config roe_gate_config.yaml      # launch using config file\n"
             "  roe-gate pentest --roe examples/local_corp_roe.yaml  # launch with CLI flags\n"
             "  roe-gate pentest --config conf.yaml --dashboard     # config + CLI override\n"
+            "  roe-gate compliance --roe roe.yaml --format soc2    # generate SOC 2 report\n"
+            "  roe-gate compliance --roe roe.yaml --format pci-dss # generate PCI-DSS report\n"
             "  roe-gate validate examples/local_corp_roe.yaml      # validate a ROE file\n"
             "  roe-gate demo                                       # see enforcement demo\n"
             "  roe-gate info                                       # show installed providers\n"
@@ -908,6 +913,11 @@ def main() -> None:
     validate_parser.add_argument(
         "roe_file",
         help="Path to the ROE YAML file to validate",
+    )
+    validate_parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Treat warnings as errors (fail if any warnings found)",
     )
 
     # --- demo ---
@@ -986,6 +996,23 @@ def main() -> None:
             "out-of-scope actions are denied outright."
         ),
     )
+    pentest_parser.add_argument(
+        "--roe-dir", default=None, metavar="PATH",
+        help="Directory of ROE YAML files for multi-ROE loading",
+    )
+    pentest_parser.add_argument(
+        "--alert-min-level", default=None,
+        choices=["info", "warning", "critical"],
+        help="Minimum alert severity level (default: info)",
+    )
+    pentest_parser.add_argument(
+        "--ha-peers", nargs="*", default=None, metavar="HOST:PORT",
+        help="HA cluster peer addresses (e.g., 10.0.0.2:19990 10.0.0.3:19990)",
+    )
+    pentest_parser.add_argument(
+        "--branding-config", default=None, metavar="PATH",
+        help="Path to a YAML file with branding overrides",
+    )
 
     # --- creator / roe-creator ---
     creator_help = "Launch the ROE Creator Dashboard to build a ROE spec visually"
@@ -1004,6 +1031,33 @@ def main() -> None:
             "--no-open", action="store_true",
             help="Don't auto-open the browser",
         )
+
+    # --- compliance ---
+    compliance_parser = subparsers.add_parser(
+        "compliance",
+        help="Generate a SOC 2 or PCI-DSS compliance report",
+        description=(
+            "Generate compliance reports from a ROE specification. "
+            "Optionally fetches live audit data from a running Gate Service."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    compliance_parser.add_argument(
+        "--roe", required=True, metavar="PATH",
+        help="Path to the ROE YAML specification file",
+    )
+    compliance_parser.add_argument(
+        "--format", required=True, choices=["soc2", "pci-dss"],
+        help="Report format: soc2 or pci-dss",
+    )
+    compliance_parser.add_argument(
+        "--output", default=None, metavar="PATH",
+        help="Output file path (JSON if .json extension, text otherwise). Prints to stdout if omitted.",
+    )
+    compliance_parser.add_argument(
+        "--gate-url", default=None, metavar="URL",
+        help="URL of a running Gate Service to fetch live audit data (e.g., http://127.0.0.1:19990)",
+    )
 
     # --- info ---
     subparsers.add_parser(
@@ -1027,6 +1081,8 @@ def main() -> None:
             cmd_pentest(args)
         elif args.command in ("creator", "roe-creator"):
             cmd_creator(args)
+        elif args.command == "compliance":
+            cmd_compliance(args)
         elif args.command == "info":
             cmd_info(args)
     except KeyboardInterrupt:

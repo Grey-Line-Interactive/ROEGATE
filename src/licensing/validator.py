@@ -1,8 +1,10 @@
-"""Runtime license validator — checks license key on startup and gates features."""
+"""Runtime license validator — loads license key for corporate compliance tracking.
 
-import functools
+All features are available regardless of license tier (open source).
+License validation is retained so corporate users can demonstrate compliance.
+"""
+
 import os
-from http import HTTPStatus
 from pathlib import Path
 from typing import Optional
 
@@ -82,11 +84,8 @@ def is_tier_active(tier: Tier) -> bool:
 
 
 def is_feature_available(feature: str) -> bool:
-    """Check if a feature is available under the current license tier."""
-    required_tier = FEATURE_TIERS.get(feature)
-    if required_tier is None:
-        return False
-    return is_tier_active(required_tier)
+    """Check if a feature is available. All features are available (open source)."""
+    return feature in FEATURE_TIERS
 
 
 def reset_tier_cache() -> None:
@@ -97,26 +96,13 @@ def reset_tier_cache() -> None:
 
 
 def require_tier(minimum_tier: Tier):
-    """Decorator for HTTP handler methods that require a minimum license tier.
+    """Decorator retained for backward compatibility. All features are open source.
 
-    When the active tier is below minimum_tier, calls
-    self._send_error(HTTPStatus.PAYMENT_REQUIRED, message) and returns None.
+    License validation is retained for corporate compliance tracking only.
+    This decorator no longer gates any functionality.
     """
 
     def decorator(method):
-        @functools.wraps(method)
-        def wrapper(self, *args, **kwargs):
-            current = get_active_tier()
-            if current < minimum_tier:
-                self._send_error(
-                    HTTPStatus.PAYMENT_REQUIRED,
-                    f"This feature requires a {minimum_tier.name} license "
-                    f"(current: {current.name}). "
-                    "Contact sales@roegate.io to upgrade.",
-                )
-                return None
-            return method(self, *args, **kwargs)
-
-        return wrapper
+        return method
 
     return decorator

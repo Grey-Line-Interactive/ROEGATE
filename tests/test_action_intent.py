@@ -50,7 +50,8 @@ def test_action_category_all_expected_values_exist():
         "credential_testing", "authorization_testing", "injection_testing",
         "exploitation", "post_exploitation", "lateral_movement",
         "privilege_escalation", "data_exfiltration", "denial_of_service",
-        "social_engineering", "direct_database_access", "file_access",
+        "social_engineering", "physical", "wireless", "cloud",
+        "direct_database_access", "file_access",
         "command_execution", "network_connect", "other",
     }
     actual = {member.value for member in ActionCategory}

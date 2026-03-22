@@ -3,7 +3,7 @@
 
 roe:
   metadata:
-    engagement_id: "LOCAL-001"
+    engagement_id: "ENG-2025-100"
     client: "Local Development"
     created: "2025-01-01T00:00:00Z"
     approved_by: "Operator"
@@ -107,8 +107,8 @@ roe:
         reason: "Stay on localhost only"
 
   data_handling:
-    pii_encountered: "log_metadata_only"
-    credentials_found: "log_existence_and_values"
+    pii_encountered: "hash_and_log_metadata_only"
+    credentials_found: "log_existence_only_no_values"
     max_evidence_size: "10MB"
 
   constraints:

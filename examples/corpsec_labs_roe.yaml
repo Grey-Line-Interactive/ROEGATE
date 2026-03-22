@@ -25,9 +25,9 @@ roe:
   metadata:
     engagement_id: "ENG-2025-001"
     client: "CorpSec Labs"
-    created: "2025-01-01"
+    created: "2025-01-01T00:00:00Z"
     approved_by: "Jane Smith, CISO — CorpSec Labs"
-    version: "1.0"
+    version: 1
     notes: |
       Authorized penetration test of the CorpSec Labs staging environment.
       Testing includes web application and API security assessment.
@@ -90,7 +90,7 @@ roe:
         - type: "database"
           protocols: ["postgresql", "mysql", "mongodb", "redis", "mssql"]
           reason: "No direct database connections permitted"
-        - type: "cloud_metadata"
+        - type: "custom"
           urls: ["http://169.254.169.254/*"]
           reason: "Cloud metadata endpoint prohibited"
 
@@ -162,36 +162,28 @@ roe:
         reason: "Demonstrating access is sufficient — no actual data extraction"
       - category: "lateral_movement"
         reason: "No pivoting to additional systems beyond target scope"
-      - category: "persistence"
+      - category: "post_exploitation"
         reason: "No backdoors, cron jobs, or persistent implants"
-      - category: "destructive_testing"
-        reason: "No file deletion, data corruption, or service disruption"
+      - category: "privilege_escalation"
+        reason: "No privilege escalation or service disruption"
 
     requires_approval:
-      - category: "critical_exploitation"
+      - category: "exploitation"
         condition: "Any exploit with CVSS score >= 9.0"
-        approver: "human_via_dashboard"
-        timeout_seconds: 300
-        on_timeout: "deny"
+        approver: "human_operator"
+        timeout: "5m"
       - category: "credential_testing"
         condition: "Automated credential stuffing with > 3 attempts per account"
-        approver: "human_via_dashboard"
-        timeout_seconds: 120
-        on_timeout: "deny"
+        approver: "human_operator"
+        timeout: "2m"
 
   # ── Data Handling ──────────────────────────────────────────────────────────
   data_handling:
-    pii_encountered:
-      action: "log_existence_only"
-      reason: "Do not store PII — log that it exists and move on"
-    credentials_found:
-      action: "log_existence_and_type"
-      reason: "Note credential type found but do not record actual values"
-    vulnerability_evidence:
-      action: "capture_and_encrypt"
-      max_size: "5MB"
-      encryption: "AES-256-GCM"
-    max_evidence_records: 100
+    pii_encountered: "hash_and_log_metadata_only"
+    credentials_found: "log_existence_only_no_values"
+    max_evidence_size: "5MB"
+    evidence_encryption: "AES-256-GCM"
+    max_records_per_query: 100
 
   # ── Operational Constraints ────────────────────────────────────────────────
   constraints:
@@ -205,7 +197,7 @@ roe:
     kill_switch: true
     escalation_contact: "security-lead@corpsec.local"
     max_consecutive_denials: 5
-    auto_halt_on:
+    auto_halt_conditions:
       - "out_of_scope_target_detected"
       - "production_system_contacted"
       - "data_exfiltration_detected"

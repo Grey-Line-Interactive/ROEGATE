@@ -11,15 +11,45 @@ If the ROE says port 5432 is denied, connecting to port 5432 is HARD_DENY. Perio
 
 from __future__ import annotations
 
-import ipaddress
 import fnmatch
+import ipaddress
+import logging
 import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
+from zoneinfo import ZoneInfo
 
-from .action_intent import ActionIntent, ActionCategory, DataAccessType
+from .action_intent import ActionCategory, ActionIntent, DataAccessType
+
+logger = logging.getLogger(__name__)
+
+
+# Category rollup: child → parent relationships.
+# If a ROE rule targets the parent category, it also applies to child categories.
+CATEGORY_ROLLUP: dict[str, str] = {
+    "port_scanning": "reconnaissance",
+    "service_enumeration": "reconnaissance",
+    "injection_testing": "web_application_testing",
+    "credential_testing": "authentication_testing",
+}
+
+
+def _category_matches(rule_category: str, intent_category: str) -> bool:
+    """Check if a rule's category matches an intent's category.
+
+    Supports exact match, 'any' wildcard, and rollup (child→parent).
+    If the rule targets 'reconnaissance', it also matches 'port_scanning'
+    and 'service_enumeration'.
+    """
+    if rule_category == "any":
+        return True
+    if rule_category == intent_category:
+        return True
+    # Rollup: if intent is a child category, check if the rule targets its parent
+    parent = CATEGORY_ROLLUP.get(intent_category)
+    return bool(parent and parent == rule_category)
 
 
 class RuleVerdict(str, Enum):
@@ -261,8 +291,16 @@ class RuleEngine:
                 matched_value=now.isoformat(),
             )
 
-        # Check blackout dates
-        today_str = now.strftime("%Y-%m-%d")
+        # Convert to local timezone for blackout/hours checks
+        local_now = now
+        if self.timezone_str and self.timezone_str != "UTC":
+            try:
+                local_now = now.astimezone(ZoneInfo(self.timezone_str))
+            except (KeyError, ValueError):
+                logger.warning("Unknown timezone %r, falling back to UTC", self.timezone_str)
+
+        # Check blackout dates (using local timezone)
+        today_str = local_now.strftime("%Y-%m-%d")
         if today_str in self.blackout_dates:
             return MatchedRule(
                 rule_type="schedule",
@@ -271,22 +309,30 @@ class RuleEngine:
                 matched_value=today_str,
             )
 
-        # Check allowed hours
+        # Check allowed hours (using local timezone)
         if self.allowed_hours:
             match = re.match(r"(\d{2}:\d{2})-(\d{2}:\d{2})", self.allowed_hours)
             if match:
                 start_str, end_str = match.groups()
                 start_h, start_m = map(int, start_str.split(":"))
                 end_h, end_m = map(int, end_str.split(":"))
-                current_minutes = now.hour * 60 + now.minute
+                current_minutes = local_now.hour * 60 + local_now.minute
                 start_minutes = start_h * 60 + start_m
                 end_minutes = end_h * 60 + end_m
-                if current_minutes < start_minutes or current_minutes > end_minutes:
+
+                if start_minutes <= end_minutes:
+                    # Normal window (e.g., 09:00-17:00)
+                    outside = current_minutes < start_minutes or current_minutes > end_minutes
+                else:
+                    # Midnight-wrap window (e.g., 22:00-06:00)
+                    outside = current_minutes < start_minutes and current_minutes > end_minutes
+
+                if outside:
                     return MatchedRule(
                         rule_type="schedule",
                         rule_path="schedule.allowed_hours",
                         description=f"Current time outside allowed hours ({self.allowed_hours})",
-                        matched_value=now.strftime("%H:%M"),
+                        matched_value=local_now.strftime("%H:%M"),
                     )
 
         return None
@@ -387,13 +433,8 @@ class RuleEngine:
             reason = denied.get("reason", "Denied")
             match_rules = denied.get("match", {})
 
-            # Check category match
-            category_matches = (
-                category == intent.category.value
-                or category == "any"
-            )
-
-            if not category_matches:
+            # Check category match (with rollup support)
+            if not _category_matches(category, intent.category.value):
                 continue
 
             # If there are additional match criteria, check them too
@@ -422,8 +463,8 @@ class RuleEngine:
             category = rule.get("category", "")
             condition = rule.get("condition", "")
 
-            # Category match
-            if category != "any" and category != intent.category.value:
+            # Category match (with rollup support)
+            if not _category_matches(category, intent.category.value):
                 continue
 
             # Evaluate condition (simple expression evaluation)
@@ -530,7 +571,7 @@ class RuleEngine:
             category = allowed.get("category", "")
             methods = allowed.get("methods", [])
 
-            if category == intent.category.value or category == "any":
+            if _category_matches(category, intent.category.value):
                 # If specific methods are listed, check subcategory
                 if methods and intent.subcategory:
                     if intent.subcategory in methods:
@@ -572,7 +613,26 @@ class RuleEngine:
 
     @staticmethod
     def _check_match_criteria(intent: ActionIntent, match_rules: dict[str, Any]) -> bool:
-        """Check additional match criteria for a denied action rule."""
+        """Check additional match criteria for a denied action rule.
+
+        Returns True if any recognized criterion matches the intent.
+        Returns False if no recognized criteria match (the rule doesn't apply
+        to this specific intent, even though the category matched).
+
+        Unrecognized keys in match_rules are logged and ignored — they do NOT
+        cause an automatic match, preventing silent over-blocking from typos
+        or future schema keys.
+        """
+        _KNOWN_KEYS = {"ports", "protocols", "record_count_threshold", "targets"}
+        present_keys = set(match_rules.keys())
+        unknown_keys = present_keys - _KNOWN_KEYS
+        if unknown_keys:
+            logger.warning(
+                "Denied action match rule contains unrecognized keys: %s. "
+                "These will be ignored. Update the rule engine if these are intentional.",
+                unknown_keys,
+            )
+
         # Check port matching
         ports = match_rules.get("ports", [])
         if ports and intent.target.port:
@@ -593,15 +653,24 @@ class RuleEngine:
 
         # Check record count threshold
         threshold = match_rules.get("record_count_threshold")
-        if threshold and intent.impact.record_count_estimate:
+        if threshold is not None and intent.impact.record_count_estimate is not None:
             if intent.impact.record_count_estimate > threshold:
                 return True
 
-        # If no match criteria matched, check if we should match on category alone
-        # (this is the case when match_rules exist but none are relevant to this intent)
-        if not ports and not protocols and threshold is None:
-            return True
+        # Check target patterns
+        targets = match_rules.get("targets", [])
+        if targets:
+            target_str = intent.target.url or intent.target.host or ""
+            for pattern in targets:
+                if fnmatch.fnmatch(target_str.lower(), pattern.lower()):
+                    return True
 
+        # If match_rules was provided but contains NO recognized keys,
+        # the user intended specific criteria we don't understand.
+        # Do NOT auto-match — send to the Judge LLM for evaluation instead.
+        # (The no-match-block case is handled in _check_denied_actions's else branch.)
+
+        # Some recognized criteria were present but none matched this intent.
         return False
 
     def _evaluate_condition(self, intent: ActionIntent, condition: str) -> bool:

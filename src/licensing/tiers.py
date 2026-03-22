@@ -1,21 +1,30 @@
-"""License tier definitions and feature-to-tier mapping."""
+"""License tier definitions and feature-to-tier mapping.
+
+All features are open source and available at the COMMUNITY tier.
+Tiers are retained for corporate compliance tracking — organizations
+that require a commercial license can validate their key and see their
+tier reported in the health endpoint.
+"""
 
 from enum import IntEnum
 
 
 class Tier(IntEnum):
-    """License tiers ordered by capability level. Higher value = more features."""
+    """License tiers for corporate compliance tracking.
 
-    COMMUNITY = 0  # Free, MIT-licensed, no key needed
-    PRO = 1  # $2,500/mo, requires license key
-    ENTERPRISE = 2  # $8,000/mo, requires license key
-    MSSP = 3  # Custom pricing, requires license key
+    All features are available regardless of tier. Higher tiers exist
+    for organizations that require a commercial license agreement.
+    """
+
+    COMMUNITY = 0  # Open source, no key needed
+    PRO = 1  # Corporate license
+    ENTERPRISE = 2  # Corporate license
+    MSSP = 3  # Corporate license (OEM/multi-tenant)
 
 
-# Maps feature names to the minimum tier required.
-# Community features are always available (no license needed).
+# Maps feature names to tiers. All features are COMMUNITY (open source).
+# This mapping is retained for backward compatibility and informational queries.
 FEATURE_TIERS = {
-    # Community (free, MIT)
     "gate_pipeline": Tier.COMMUNITY,
     "rule_engine": Tier.COMMUNITY,
     "local_judge": Tier.COMMUNITY,
@@ -26,16 +35,13 @@ FEATURE_TIERS = {
     "cli_integration": Tier.COMMUNITY,
     "hitl": Tier.COMMUNITY,
     "dashboard": Tier.COMMUNITY,
-    # Pro ($2,500/mo)
-    "multi_roe": Tier.PRO,
-    "siem_logging": Tier.PRO,
-    "alerting": Tier.PRO,
     "cloud_judge": Tier.COMMUNITY,
-    # Enterprise ($8,000/mo)
-    "sso_rbac": Tier.ENTERPRISE,
-    "compliance_reports": Tier.ENTERPRISE,
-    "ha_clustering": Tier.ENTERPRISE,
-    # MSSP/OEM (Custom)
-    "multi_tenant": Tier.MSSP,
-    "white_label": Tier.MSSP,
+    "multi_roe": Tier.COMMUNITY,
+    "siem_logging": Tier.COMMUNITY,
+    "alerting": Tier.COMMUNITY,
+    "sso_rbac": Tier.COMMUNITY,
+    "compliance_reports": Tier.COMMUNITY,
+    "ha_clustering": Tier.COMMUNITY,
+    "multi_tenant": Tier.COMMUNITY,
+    "white_label": Tier.COMMUNITY,
 }

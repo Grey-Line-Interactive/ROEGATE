@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import yaml
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from src.agents.base import AgentConfig
 
@@ -21,6 +21,10 @@ class GateConfig:
     rbac: bool = False
     slack_webhook: str = ""
     webhook_url: str = ""
+    roe_dir: str = ""                            # Multi-ROE: directory of ROE YAMLs
+    alert_min_level: str = "info"                # Alerting: minimum severity
+    ha_peers: list = field(default_factory=list)  # HA: ["host1:port1", "host2:port2"]
+    branding: dict = field(default_factory=dict)  # Branding: {company_name, primary_color, ...}
 
 
 @dataclass
@@ -79,6 +83,10 @@ class ROEGateConfig:
             rbac=gate_data.get("rbac", False),
             slack_webhook=gate_data.get("slack_webhook", ""),
             webhook_url=gate_data.get("webhook_url", ""),
+            roe_dir=gate_data.get("roe_dir", ""),
+            alert_min_level=gate_data.get("alert_min_level", "info"),
+            ha_peers=gate_data.get("ha_peers", []),
+            branding=gate_data.get("branding", {}),
         )
 
         return cls(
@@ -119,6 +127,10 @@ class ROEGateConfig:
                 "rbac": self.gate.rbac,
                 "slack_webhook": self.gate.slack_webhook,
                 "webhook_url": self.gate.webhook_url,
+                "roe_dir": self.gate.roe_dir,
+                "alert_min_level": self.gate.alert_min_level,
+                "ha_peers": self.gate.ha_peers,
+                "branding": self.gate.branding,
             },
             "objective": self.objective,
         }
