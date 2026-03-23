@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "roe-gate"
-version = "0.2.2"
+version = "0.2.3"
 description = "Out-of-Band Rules of Engagement Enforcement for Agentic Security Testing"
 readme = "README.md"
 license = "MIT"

@@ -19,6 +19,76 @@ from pathlib import Path
 from typing import Any
 
 
+def _check_for_update() -> None:
+    """Check PyPI for a newer version and print an upgrade notice if outdated.
+
+    Runs in a background thread so it never slows down startup.
+    Caches the result for 24 hours in a temp file to avoid repeated requests.
+    Fails silently on any error (no internet, PyPI down, etc.).
+    """
+    import threading
+
+    def _check() -> None:
+        try:
+            import json as _json
+            import time
+            import tempfile
+            import urllib.request
+
+            from src import __version__ as current
+
+            # Cache check — skip if we checked in the last 24 hours
+            cache_path = Path(tempfile.gettempdir()) / ".roe_gate_update_check"
+            now = time.time()
+            if cache_path.exists():
+                try:
+                    cache = _json.loads(cache_path.read_text())
+                    if now - cache.get("ts", 0) < 86400:
+                        # Use cached result
+                        latest = cache.get("latest", current)
+                        if latest != current and latest > current:
+                            _print_update_notice(current, latest)
+                        return
+                except Exception:
+                    pass
+
+            # Fetch latest version from PyPI
+            req = urllib.request.Request(
+                "https://pypi.org/pypi/roe-gate/json",
+                headers={"Accept": "application/json"},
+            )
+            resp = urllib.request.urlopen(req, timeout=3)
+            data = _json.loads(resp.read())
+            latest = data.get("info", {}).get("version", current)
+
+            # Cache the result
+            try:
+                cache_path.write_text(_json.dumps({"ts": now, "latest": latest}))
+            except Exception:
+                pass
+
+            if latest != current and latest > current:
+                _print_update_notice(current, latest)
+
+        except Exception:
+            pass  # Never disrupt the CLI
+
+    threading.Thread(target=_check, daemon=True).start()
+
+
+def _print_update_notice(current: str, latest: str) -> None:
+    """Print a visible upgrade notice to stderr."""
+    print(
+        f"\n  \033[33m╭─────────────────────────────────────────────────╮\033[0m\n"
+        f"  \033[33m│\033[0m  Update available: \033[31m{current}\033[0m → \033[32m{latest}\033[0m"
+        + " " * (28 - len(current) - len(latest))
+        + f"\033[33m│\033[0m\n"
+        f"  \033[33m│\033[0m  Run: \033[36mpip install --upgrade roe-gate\033[0m           \033[33m│\033[0m\n"
+        f"  \033[33m╰─────────────────────────────────────────────────╯\033[0m\n",
+        file=sys.stderr,
+    )
+
+
 def _load_yaml(path: str) -> dict[str, Any]:
     """Load and parse a YAML file, returning the parsed dictionary."""
     try:
@@ -1067,6 +1137,9 @@ def main() -> None:
     )
 
     args = parser.parse_args()
+
+    # Check for updates in the background (non-blocking)
+    _check_for_update()
 
     if args.command is None:
         parser.print_help()

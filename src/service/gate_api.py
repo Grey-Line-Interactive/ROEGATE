@@ -1873,8 +1873,10 @@ class GateRequestHandler(BaseHTTPRequestHandler):
         """GET /api/v1/health -- Health check / readiness probe."""
         server = self.server  # type: ignore[attr-defined]
         uptime = time.monotonic() - server.start_time
+        from src import __version__
         self._send_json(HTTPStatus.OK, {
             "status": "ok",
+            "version": __version__,
             "roe_hash": server.roe_hash,
             "engagement_id": server.engagement_id,
             "uptime_seconds": round(uptime, 2),
