@@ -550,6 +550,7 @@ def _build_dashboard_html(engagement_id: str, roe_hash: str, roe_spec: dict | No
       </div>
       <div style="display:flex;gap:8px;align-items:center">
         <button onclick="saveAlertConfig()" style="font-family:var(--font-mono);font-size:12px;padding:8px 20px;border-radius:6px;border:1px solid var(--green);background:var(--green);color:#000;cursor:pointer;font-weight:700;transition:all 0.2s">Save</button>
+        <button onclick="testAlert()" style="font-family:var(--font-mono);font-size:12px;padding:8px 16px;border-radius:6px;border:1px solid var(--amber);background:none;color:var(--amber);cursor:pointer;transition:all 0.2s">Test Alert</button>
         <button onclick="clearAlertConfig()" style="font-family:var(--font-mono);font-size:12px;padding:8px 16px;border-radius:6px;border:1px solid var(--red);background:none;color:var(--red);cursor:pointer;transition:all 0.2s">Clear All</button>
         <span id="cfg-alert-msg" style="font-size:12px;margin-left:8px;opacity:0;transition:opacity 0.3s"></span>
       </div>
@@ -581,6 +582,7 @@ def _build_dashboard_html(engagement_id: str, roe_hash: str, roe_spec: dict | No
 </div>
 <div class="controls">
   <button class="danger" onclick="doHalt()">Emergency Halt</button>
+  <button id="btn-resume" style="display:none;border-color:var(--green);color:var(--green)" onclick="doResume()">Resume Session</button>
   <button class="export" onclick="exportJSON()">Export JSON</button>
   <button class="export" onclick="exportCSV()">Export CSV</button>
   <label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px">
@@ -1286,6 +1288,24 @@ async function clearAlertConfig() {{
   }}
 }}
 
+async function testAlert() {{
+  try {{
+    var res = await fetch(BASE + '/api/v1/alerting/test', {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: '{{}}',
+    }});
+    var data = await res.json();
+    if (res.ok) {{
+      showAlertMsg('Test alert sent', 'var(--green)');
+    }} else {{
+      showAlertMsg(data.error || 'Test failed', 'var(--red)');
+    }}
+  }} catch(err) {{
+    showAlertMsg('Network error', 'var(--red)');
+  }}
+}}
+
 // --- Settings tab ---
 async function refreshSettings() {{
   // HA Cluster
@@ -1393,7 +1413,15 @@ async function refresh() {{
     document.getElementById('s-eval').textContent = stats.total_evaluations ?? 0;
     document.getElementById('s-allow').textContent = stats.total_allows ?? 0;
     document.getElementById('s-deny').textContent = stats.total_denials ?? 0;
-    document.getElementById('s-halt').textContent = (stats.halted_sessions ?? []).length;
+    var haltedSessions = stats.halted_sessions ?? [];
+    document.getElementById('s-halt').textContent = haltedSessions.length;
+    var resumeBtn = document.getElementById('btn-resume');
+    if (haltedSessions.length > 0) {{
+      resumeBtn.style.display = '';
+      resumeBtn.setAttribute('data-sessions', JSON.stringify(haltedSessions));
+    }} else {{
+      resumeBtn.style.display = 'none';
+    }}
 
     allEvents = audit.events ?? [];
     updateBadges(allEvents);
@@ -1421,6 +1449,19 @@ async function doHalt() {{
   if (!confirm('Trigger emergency halt? This will block ALL actions.')) return;
   await fetch(BASE + '/api/v1/halt', {{ method: 'POST',
     headers: {{'Content-Type': 'application/json'}}, body: '{{}}' }});
+  refresh();
+}}
+
+async function doResume() {{
+  var btn = document.getElementById('btn-resume');
+  var sessions = JSON.parse(btn.getAttribute('data-sessions') || '[]');
+  if (sessions.length === 0) return;
+  if (!confirm('Resume ' + sessions.length + ' halted session(s)? Actions will be allowed again.')) return;
+  for (var i = 0; i < sessions.length; i++) {{
+    await fetch(BASE + '/api/v1/resume', {{ method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{ session_id: sessions[i] }}) }});
+  }}
   refresh();
 }}
 
@@ -1540,6 +1581,7 @@ class GateRequestHandler(BaseHTTPRequestHandler):
         "/api/v1/approvals/pending": Permission.VIEW_STATS,
         "/api/v1/alerting/status": Permission.VIEW_STATS,
         "/api/v1/alerting/configure": Permission.MANAGE_ROE,
+        "/api/v1/alerting/test": Permission.MANAGE_ROE,
     }
 
     # Approval endpoints use prefix matching (handled in _check_rbac)
@@ -1626,6 +1668,7 @@ class GateRequestHandler(BaseHTTPRequestHandler):
             "/api/v1/roe/archive": self._handle_roe_archive,
             "/api/v1/tenants/create": self._handle_tenant_create,
             "/api/v1/alerting/configure": self._handle_alerting_configure,
+            "/api/v1/alerting/test": self._handle_alerting_test,
         }
         handler = route_map.get(self.path)
         # Check for parameterized approval respond route: /api/v1/approvals/{id}/respond
@@ -2139,6 +2182,31 @@ class GateRequestHandler(BaseHTTPRequestHandler):
             len(new_manager._alerters),
         )
         self._send_json(HTTPStatus.OK, {"status": "configured", "alerters": len(new_manager._alerters)})
+
+    def _handle_alerting_test(self) -> None:
+        """POST /api/v1/alerting/test -- Send a test alert to all configured alerters."""
+        alert_mgr: AlertManager | None = getattr(self.server, "alert_manager", None)
+        if alert_mgr is None:
+            self._send_error(HTTPStatus.BAD_REQUEST, "Alerting is not configured")
+            return
+
+        from src.service.alerting import AlertEvent, AlertLevel
+
+        test_event = AlertEvent(
+            level=AlertLevel.INFO,
+            event_type="test",
+            summary="Test alert from ROE Gate dashboard",
+            details={
+                "message": "This is a test alert to verify your alerting configuration is working.",
+                "source": "dashboard",
+            },
+        )
+        alert_mgr.alert(test_event)
+        logger.info("Test alert dispatched to %d alerter(s)", len(alert_mgr._alerters))
+        self._send_json(HTTPStatus.OK, {
+            "status": "sent",
+            "alerters": len(alert_mgr._alerters),
+        })
 
     # ── Public Key endpoint (Ed25519) ────────────────────────────────
 
