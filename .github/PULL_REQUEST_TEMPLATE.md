@@ -1,6 +1,6 @@
 **ROE Gate does not accept pull requests.**
 
-This project is developed entirely in-house by Grey Line Interactive. All pull requests from external contributors will be closed without review.
+This project is developed entirely in-house by Rick Roane. All pull requests from external contributors will be closed without review.
 
 If you've found a bug, please [open an issue](https://github.com/Grey-Line-Interactive/ROEGATE/issues/new/choose) instead.
 

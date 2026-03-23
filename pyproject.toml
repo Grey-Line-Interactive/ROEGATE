@@ -3,15 +3,16 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "roe-agent-gate"
+name = "roe-gate"
 version = "0.2.0"
 description = "Out-of-Band Rules of Engagement Enforcement for Agentic Security Testing"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
 authors = [
-    { name = "roe-agent-gate contributors" },
+    { name = "Rick Roane" },
 ]
+keywords = ["security", "pentest", "roe", "rules-of-engagement", "agentic", "ai-safety", "red-team"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -56,11 +57,11 @@ ed25519 = [
     "cryptography>=41.0",
 ]
 all-providers = [
-    "roe-agent-gate[transformers]",
-    "roe-agent-gate[llama-cpp]",
-    "roe-agent-gate[anthropic]",
-    "roe-agent-gate[openai]",
-    "roe-agent-gate[claude-agent-sdk]",
+    "roe-gate[transformers]",
+    "roe-gate[llama-cpp]",
+    "roe-gate[anthropic]",
+    "roe-gate[openai]",
+    "roe-gate[claude-agent-sdk]",
 ]
 dev = [
     "pytest>=8.0",

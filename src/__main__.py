@@ -856,11 +856,11 @@ def cmd_info(args: argparse.Namespace) -> None:
     print("  Optional (install for additional provider support):")
     print()
     providers = [
-        ("AnthropicProvider", "anthropic", "pip install roe-agent-gate[anthropic]"),
-        ("OpenAIProvider", "openai", "pip install roe-agent-gate[openai]"),
-        ("ClaudeAgentSDKProvider", "claude_agent_sdk", "pip install roe-agent-gate[claude-agent-sdk]"),
-        ("TransformersProvider", "transformers", "pip install roe-agent-gate[transformers]"),
-        ("LlamaCppProvider", "llama_cpp", "pip install roe-agent-gate[llama-cpp]"),
+        ("AnthropicProvider", "anthropic", "pip install roe-gate[anthropic]"),
+        ("OpenAIProvider", "openai", "pip install roe-gate[openai]"),
+        ("ClaudeAgentSDKProvider", "claude_agent_sdk", "pip install roe-gate[claude-agent-sdk]"),
+        ("TransformersProvider", "transformers", "pip install roe-gate[transformers]"),
+        ("LlamaCppProvider", "llama_cpp", "pip install roe-gate[llama-cpp]"),
     ]
 
     for name, module, install in providers:

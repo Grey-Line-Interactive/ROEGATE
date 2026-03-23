@@ -162,7 +162,21 @@ Every evaluation, every decision, every token — live in your browser with 7 ta
 - Python 3.10+ (`python3 --version` to check)
 - `pyyaml` (only required dependency — installed automatically)
 
-### Install
+### Install from PyPI
+
+```bash
+pip install roe-gate
+```
+
+Optional provider extras:
+
+```bash
+pip install roe-gate[anthropic]       # Claude support
+pip install roe-gate[openai]          # GPT-4 support
+pip install roe-gate[all-providers]   # Everything
+```
+
+### Install from Source
 
 ```bash
 git clone https://github.com/Grey-Line-Interactive/ROEGATE.git
@@ -458,18 +472,18 @@ The Judge LLM can run on any provider — choose based on your privacy, cost, an
 
 | Provider | Install | Notes |
 |---|---|---|
-| **Anthropic** (Claude) | `pip install -e ".[anthropic]"` | Claude Sonnet, Opus |
-| **OpenAI** (GPT-4) | `pip install -e ".[openai]"` | GPT-4o, o1, any OpenAI-compatible API |
-| **Claude Agent SDK** | `pip install -e ".[claude-agent-sdk]"` | Claude Code integration |
-| **HuggingFace Transformers** | `pip install -e ".[transformers]"` | Local models with GPU |
-| **llama.cpp** | `pip install -e ".[llama-cpp]"` | Local GGUF models, CPU or GPU |
+| **Anthropic** (Claude) | `pip install roe-gate[anthropic]` | Claude Sonnet, Opus |
+| **OpenAI** (GPT-4) | `pip install roe-gate[openai]` | GPT-4o, o1, any OpenAI-compatible API |
+| **Claude Agent SDK** | `pip install roe-gate[claude-agent-sdk]` | Claude Code integration |
+| **HuggingFace Transformers** | `pip install roe-gate[transformers]` | Local models with GPU |
+| **llama.cpp** | `pip install roe-gate[llama-cpp]` | Local GGUF models, CPU or GPU |
 | **Ollama** | Base install | Any Ollama-served model |
 | **Hybrid** (Local + Cloud) | Both extras | Local first, cloud fallback for low-confidence |
 | **Mock** | Base install | Deterministic, for testing |
 
 ```bash
 # Install all providers at once
-pip install -e ".[all-providers]"
+pip install roe-gate[all-providers]
 ```
 
 ---
@@ -601,4 +615,4 @@ python -m pytest tests/ -v
 
 ---
 
-Built by [Grey Line Interactive](https://roegate.io)
+Built by [Rick Roane](https://roegate.io)

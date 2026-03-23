@@ -4,7 +4,7 @@ Thank you for your interest in ROE Gate.
 
 ## Development Model
 
-ROE Gate is developed entirely in-house by [Grey Line Interactive](https://roegate.io). **We do not accept pull requests or external code contributions.** All PRs from external contributors will be closed without review.
+ROE Gate is developed entirely in-house by [Rick Roane](https://roegate.io). **We do not accept pull requests or external code contributions.** All PRs from external contributors will be closed without review.
 
 This is a deliberate decision — ROE Gate is a security-critical tool with patent-pending architecture, and all code is authored, reviewed, and tested internally.
 

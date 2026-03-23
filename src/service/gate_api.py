@@ -2419,7 +2419,7 @@ class GateAPIServer:
             except ImportError:
                 logger.error(
                     "Ed25519 signing requires the 'cryptography' package. "
-                    "Install with: pip install roe-agent-gate[ed25519]"
+                    "Install with: pip install roe-gate[ed25519]"
                 )
                 sys.exit(1)
 
@@ -2601,7 +2601,7 @@ class GateAPIServer:
             except ImportError:
                 logger.error(
                     "AnthropicProvider requires the 'anthropic' package. "
-                    "Install with: pip install roe-agent-gate[anthropic]"
+                    "Install with: pip install roe-gate[anthropic]"
                 )
                 sys.exit(1)
             api_key = os.environ.get("ANTHROPIC_API_KEY", "")
@@ -2619,7 +2619,7 @@ class GateAPIServer:
             except ImportError:
                 logger.error(
                     "OpenAIProvider requires the 'openai' package. "
-                    "Install with: pip install roe-agent-gate[openai]"
+                    "Install with: pip install roe-gate[openai]"
                 )
                 sys.exit(1)
             api_key = os.environ.get("OPENAI_API_KEY", "")

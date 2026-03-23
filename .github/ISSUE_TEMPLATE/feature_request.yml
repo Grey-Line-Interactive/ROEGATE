@@ -7,7 +7,7 @@ body:
       value: |
         We appreciate feature suggestions. Please describe your idea below.
 
-        **Note:** ROE Gate is developed entirely in-house by Grey Line Interactive. We review all suggestions but do not accept pull requests.
+        **Note:** ROE Gate is developed entirely in-house by Rick Roane. We review all suggestions but do not accept pull requests.
 
   - type: dropdown
     id: component
