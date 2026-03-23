@@ -9,7 +9,7 @@ which evaluates it against a formal ROE specification using a dual-evaluation pi
 (deterministic rules + isolated LLM judge) and cryptographic action signing.
 """
 
-__version__ = "0.2.3"
+__version__ = "0.2.4"
 
 from .core import (
     ActionIntent, ActionCategory, Target, ImpactAssessment, classify_tool_call,
