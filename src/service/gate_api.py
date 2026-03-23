@@ -2192,13 +2192,17 @@ class GateRequestHandler(BaseHTTPRequestHandler):
 
         from src.service.alerting import AlertEvent, AlertLevel
 
+        gate: ROEGate = self.server.gate  # type: ignore[attr-defined]
+        engagement = getattr(gate, "engagement_id", "unknown")
         test_event = AlertEvent(
             level=AlertLevel.INFO,
             event_type="test",
-            summary="Test alert from ROE Gate dashboard",
+            summary="Test Alert",
             details={
-                "message": "This is a test alert to verify your alerting configuration is working.",
-                "source": "dashboard",
+                "message": "Your alerting configuration is working correctly.",
+                "engagement": engagement,
+                "source": "Dashboard",
+                "alerters": len(alert_mgr._alerters),
             },
         )
         alert_mgr.alert(test_event)

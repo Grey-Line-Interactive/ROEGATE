@@ -114,12 +114,30 @@ class SlackAlerter:
         color = _SLACK_COLORS.get(decision, "#439fe0")
         emoji = _LEVEL_EMOJI.get(event.level, "")
 
+        # Build human-readable fields from details
+        fields: list[dict[str, Any]] = []
+        skip_keys = {"message", "decision"}  # shown in text/title already
+        for key, val in event.details.items():
+            if key in skip_keys:
+                continue
+            fields.append({
+                "title": key.replace("_", " ").title(),
+                "value": str(val),
+                "short": len(str(val)) < 40,
+            })
+
+        # Use message from details as text if available, otherwise summary
+        text = event.details.get("message", "")
+
         attachment: dict[str, Any] = {
             "color": color,
             "title": f"{emoji} ROE Gate — {event.summary}",
-            "text": json.dumps(event.details, indent=2) if event.details else "",
+            "text": text,
+            "fields": fields if fields else None,
             "footer": f"Level: {event.level.value} | {event.timestamp}",
         }
+        # Remove None fields
+        attachment = {k: v for k, v in attachment.items() if v is not None}
 
         payload = json.dumps({"attachments": [attachment]}).encode("utf-8")
 
